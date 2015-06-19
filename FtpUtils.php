@@ -19,8 +19,6 @@ class FtpUtils {
 	/** @var FtpUtils Global instance of FtpUtils. */
 	private static $_instance = null;
 	
-	private static $translationRegistered = false;
-
 	/**
 	 * Returns unique instance of FtpUtils.
 	 *
@@ -70,19 +68,20 @@ class FtpUtils {
 	}
 
 	public static function registerTranslation(){
-		if (!self::$translationRegistered) {
-			if (isset(Yii::$app) && null !== Yii::$app->getI18n()) {
-				$translations = isset(Yii::$app->getI18n()->translations) ? Yii::$app->getI18n()->translations : [];
-				if (!isset($translations['gftp']) && !isset($translations['gftp*'])) {
-					$translations['gftp'] = [
-						'class' => 'yii\i18n\PhpMessageSource',
-						'sourceLanguage' => 'en',
-						'basePath' => __DIR__ . '/messages',
-					];
-				}
-				Yii::$app->getI18n()->translations = $translations;
+		self::registerTranslationFolder('gftp', __DIR__ . '/messages');
+	}
+	
+	public static function registerTranslationFolder($group, $folder){
+		if (isset(Yii::$app) && null !== Yii::$app->getI18n()) {
+			$translations = isset(Yii::$app->getI18n()->translations) ? Yii::$app->getI18n()->translations : [];
+			if (!isset($translations[$group]) && !isset($translations[$group.'*'])) {
+				$translations[$group] = [
+					'class' => 'yii\i18n\PhpMessageSource',
+					'sourceLanguage' => 'en',
+					'basePath' => $folder
+				];
 			}
-			self::$translationRegistered = true;
+			Yii::$app->getI18n()->translations = $translations;
 		}
 	}
 }
