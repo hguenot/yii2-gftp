@@ -48,8 +48,11 @@ class FtpWidget extends \yii\base\Widget {
 			$this->ftp = Yii::$app->get('ftp');
 		}
 		
-		if ($this->baseFolder == null || in_array(trim($this->baseFolder), ["", ".", ".."])) {
-			$this->baseFolder = "/";
+		if ($this->baseFolder == null) {
+			$this->baseFolder = $this->ftp->pwd();
+		} else {
+			$this->ftp->chdir($this->baseFolder);
+			$this->baseFolder = $this->ftp->pwd();
 		}
 		
 		if ($this->navKey == null || in_array(trim($this->navKey), ["", ".", ".."])) {
@@ -129,6 +132,7 @@ class FtpWidget extends \yii\base\Widget {
 		}
 		
 		return $this->render ('ftpWidget', [
+			'baseFolder' => $this->baseFolder, 
 			'files' => $files, 
 			'error' => $error, 
 			'columns' => $this->columns,

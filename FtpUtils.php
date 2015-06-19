@@ -3,6 +3,7 @@
 namespace gftp;
 
 use \Yii;
+use gftp\drivers\RemoteDriver;
 
 /**
  * Utility class for FTP component.
@@ -41,7 +42,7 @@ class FtpUtils {
 	 * @return boolean <strong>TRUE</strong> if file is a directory, <strong>FALSE</strong> otherwise.
 	 */
 	public static function isDir($data) {
-		return substr($data->rights, 0, 1) == "d";
+		return substr($data->rights, 0, 1) == "d" || $data->isDir;
 	}
 
 	/**
@@ -68,48 +69,6 @@ class FtpUtils {
 		}
 	}
 
-	/**
-	 * Initialize global instance.
-	 */
-	public static function initialize() {
-		self::getInstance()->_init();
-	}
-
-	/**
-	 * Initialize new object (register error handler if global variable <code>YII_ENABLE_ERROR_HANDLER</code> is set to true.
-	 */
-	private function _init() {
-		if(YII_ENABLE_ERROR_HANDLER)
-			set_error_handler([$this,'handleError'],error_reporting());
-	}
-
-	/**
-	 * PHP error handler method used to catch all FTP exception.
-	 *
-	 * @param integer $code Level of the error raised
-	 * @param string $message Error message
-	 * @param string $file Filename that the error was raised in
-	 * @param integer $line Line number the error was raised at
-	 * @param array $context array that points to the active symbol table at the point the error occurred.
-	 */
-	public function handleError($code,$message,$file,$line,$context)
-	{
-		if (isset($context['this']) && $context['this'] instanceof FtpComponent) {
-			// disable error capturing to avoid recursive errors
-			restore_error_handler();
-			restore_exception_handler();
-			if (isset($message)) {
-				// FTP error message are formed : ftp_***(): <message>
-				$messages = explode(':', $message, 2);
-				$func = explode(' ', $messages[0], 2);
-				$ex = $context['this']->createException($func[0], $messages[1]);
-				if ($ex != null) throw $ex;
-			}
-		}
-
-		\Yii::$app->errorHandler->handleError($code,$message,$file,$line);
-	}
-	
 	public static function registerTranslation(){
 		if (!self::$translationRegistered) {
 			if (isset(Yii::$app) && null !== Yii::$app->getI18n()) {

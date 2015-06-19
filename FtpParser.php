@@ -11,16 +11,18 @@ class FtpParser
 		FtpUtils::registerTranslation();
 		$protocol = null;
 		
-		if (preg_match('/^ftp:\/\/[^\/]+$/', $str)){
-			$str = substr($str, 6);
-			$protocol = FtpProtocol::FTP;
+		foreach(FtpProtocol::values() as $current){
+			$regex = '/^' . $current->getProtocol() . ':\/\/[^\/]+$/';
+			
+			if (preg_match($regex, strtolower($str))){
+				$str = substr($str, strlen($current->getProtocol())+3);
+				$protocol = $current;
+				break;
+			}
 		}
-		if (preg_match('/^ftps:\/\/[^\/]+$/', $str)){
-			$str = substr($str, 7);
-			$protocol = FtpProtocol::FTPS;
-		}
+		
 		if ($protocol === null){
-			throw new FtpException("connection must start with ftp:// or ftps://");
+			throw new FtpException("Could not find a valid protocol for " . $str);
 		}
 
 		// Split connect string using reverse string
@@ -28,7 +30,11 @@ class FtpParser
 		// array("<port>:<url>", "<pass>:<user>") or array("<port>:<url>") 
 		
 		$res = [
-			'protocol' => $protocol
+			'class' => $protocol->driver,
+			'host' => 'localhost',
+			'port' => $protocol->port,
+			'user' => 'anonymous',
+			'pass' => ''
 		];
 		
 		if (count($parts) >= 1) {
@@ -57,10 +63,8 @@ class FtpParser
 		if (!isset($res['host']))
 			throw new FtpException("No host found");
 		
-		if (isset($res['port']) && !preg_match('/^[0-9]+/', $res['port'])){
+		if (isset($res['port']) && !preg_match('/^[0-9]+/', $res['port']))
 			throw new FtpException("Port is not a number");
-		}
-		
 		
 		\Yii::trace(\yii\helpers\VarDumper::dumpAsString($res), 'gftp');
 		return $res;

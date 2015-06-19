@@ -15,6 +15,7 @@ if ($error !== null) {
 		]
 	]);
 
+	echo 'Current Working dir : ' . htmlspecialchars($baseFolder) . '<br />';
 	echo \yii\grid\GridView::widget([
 		'id'=>'page-grid',
 		'dataProvider'=>$dp,

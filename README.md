@@ -7,7 +7,8 @@ It contains 2 main component :
 * `\gftp\FtpComponent` : A Yii component used to manage FTP connection and navigation (encapsulates PHP ftp method).
 * `\gftp\FtpWidget` : A widget which can be used to display FTP folder content and allow FTP server browsing.
 
-It supports FTP protocol and FTP over SSL protocol
+It supports FTP protocol and FTP over SSL protocol.
+SFTP support is provider by [Yii2-gsftp](https://github.com/hguenot/yii2-gsftp) extension.
 
 Installation
 ------------
@@ -42,10 +43,11 @@ return [
 	'components'=>[
 		// [...]
 		'ftp' => [
-			'class' => '\gftp\FtpComponent',
 			'connectionString' => 'ftp://user:pass@host:21',
-			'timeout' => 120,
-			'passive' => false
+			'driverOptions' =>  [
+				'timeout' => 120,
+				'passive' => false
+			]
 		]
 	],
 	// [...]
@@ -62,13 +64,15 @@ return [
 		// [...]
 		'ftp' => [
 			'class' => '\gftp\FtpComponent',
-			'protocol' => \gftp\FtpProtocol::FTPS,
-			'user' => 'me@somewhere.otrb',
-			'pass' => 'PassW0rd',
-			'host' => 'ftp.somewhere.otrb',
-			'port' => 2121,
-			'timeout' => 120,
-			'passive' => false
+			'driverOptions' =>  [
+				'class' => '\gftp\drivers\SftpProtocol',
+				'user' => 'me@somewhere.otrb',
+				'pass' => 'PassW0rd',
+				'host' => 'ftp.somewhere.otrb',
+				'port' => 2121,
+				'timeout' => 120,
+				'passive' => false
+			]
 		]
 	],
 	// [...]
@@ -107,13 +111,15 @@ use \gftp\FtpComponent;
 
 echo FtpWidget::widget([
 	'ftp' => new FtpComponent([
-			'protocol' => \gftp\FtpProtocol::FTPS,
-			'user' => 'me@somewhere.otrb',
-			'pass' => 'PassW0rd',
-			'host' => 'ftp.somewhere.otrb',
-			'port' => 2121,
-			'timeout' => 120,
-			'passive' => false
+			'driverOptions' =>  [
+				'class' => '\gftp\drivers\SftpProtocol',
+				'user' => 'me@somewhere.otrb',
+				'pass' => 'PassW0rd',
+				'host' => 'ftp.somewhere.otrb',
+				'port' => 2121,
+				'timeout' => 120,
+				'passive' => false
+			]
 	]);
 ]);
 ```
