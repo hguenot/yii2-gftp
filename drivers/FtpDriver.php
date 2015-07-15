@@ -27,8 +27,8 @@ class FtpDriver extends \yii\base\Object implements RemoteDriver {
 
 	/**
 	 * @var   string    FTP port.
-	 private
-	public $port = 21;
+	 */
+	private $port = 21;
 
 	/**
 	 * @var   string    FTP username.
