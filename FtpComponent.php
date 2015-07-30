@@ -83,7 +83,7 @@ class FtpComponent extends \yii\base\Component {
 			} catch (Exception $e) {
 				throw new FtpException(
 					Yii::t('gftp', '{connectString} is not a valid connection string: {message}', [
-						'connectString' => $connectionString, 
+						'connectString' => $this->connectionString, 
 						'message' => $e->getMessage()
 					])
 				);
