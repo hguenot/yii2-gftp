@@ -176,7 +176,7 @@ class FtpComponent extends \yii\base\Component {
 	public function login () {
 		$this->connectIfNeeded(false);
 		$this->handle->login();
-		$this->onLogin(new Event(['sender' => $this, 'data' => $user]));
+		$this->onLogin(new Event(['sender' => $this, 'data' => $this->handle->user]));
 	}
 
 	/**
