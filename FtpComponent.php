@@ -289,7 +289,7 @@ class FtpComponent extends \yii\base\Component {
 	public function put($mode, $local_file, $remote_file = null, $asynchronous = false) {
 		$this->connectIfNeeded();
 		$full_remote_file = $this->handle->put($mode, $local_file, $remote_file, $asynchronous);
-		$this->onFileUploaded(new Event(['sender' => $this, 'data' => $this->param]));
+		$this->onFileUploaded(new Event(['sender' => $this, 'data' => $remote_file]));
 
 		return $full_remote_file;
 	}
