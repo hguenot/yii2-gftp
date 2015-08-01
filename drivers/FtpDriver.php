@@ -481,13 +481,13 @@ class FtpDriver extends \yii\base\Object implements RemoteDriver {
 			if ($ret !== FTP_FINISHED) {
 				throw new FtpException(
 					Yii::t('gftp', 'Could not put file "{local_file}" on "{remote_file}" on server "{host}"', [
-						'host' => $this->host, 'remote_file' => $full_remote_file, 'local_file' => $local_file
+						'host' => $this->host, 'remote_file' => $remote_file, 'local_file' => $local_file
 					])
 				);
 			}
 		}
 
-		return $full_remote_file;
+		return $remote_file;
 	}
 
 	/**
