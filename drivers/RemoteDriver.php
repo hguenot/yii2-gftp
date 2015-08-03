@@ -108,6 +108,15 @@ interface RemoteDriver {
 	public function put($local_file, $remote_file = null, $mode, $asynchronous = false);
 	
 	/**
+	 * Test existence of file/folder on remote server.
+	 * 
+	 * @param string $filename File or folder path to test existence.
+	 * 
+	 * @return boolean `true` if file exists, `false` otherwise.
+	 */
+	public function fileExists($filename);
+	
+	/**
 	 * Deletes specified files from FTP server.
 	 *
 	 * @param string    $path          The file to delete.

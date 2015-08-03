@@ -295,6 +295,18 @@ class FtpComponent extends \yii\base\Component {
 	}
 
 	/**
+	 * Test existence of file/folder on remote server.
+	 * 
+	 * @param string $filename File or folder path to test existence.
+	 * 
+	 * @return boolean `true` if file exists, `false` otherwise.
+	 */
+	public function fileExists($filename) {
+		$this->connectIfNeeded();
+		return $this->handle->fileExists($filename);
+	}
+
+	/**
 	 * Deletes specified files from FTP server.
 	 *
 	 * @param string    $path          The file to delete.
@@ -386,7 +398,7 @@ class FtpComponent extends \yii\base\Component {
 
 	/* *********************************
 	 * EVENTS SECTION
-	*/
+	 */
 	/**
 	 * Raised when connection to FTP server was openned.
 	 *

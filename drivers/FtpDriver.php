@@ -400,6 +400,16 @@ class FtpDriver extends \yii\base\Object implements RemoteDriver {
 	}
 
 	/**
+	 * @see RemoteDriver::fileExists($filename)
+	 */
+	public function fileExists($filename) {
+		$this->connectIfNeeded();
+
+		$res = ftp_nlist($this->handle, $filename);
+		return $res !== false;
+	}
+
+	/**
 	 * @see RemoteDriver::delete($path)
 	 */
 	public function delete($path) {
