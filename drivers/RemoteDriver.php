@@ -105,7 +105,7 @@ interface RemoteDriver {
 	 *
 	 * @throws FtpException If an error occcured during file transfert.
 	 */
-	public function put($local_file, $remote_file = null, $mode, $asynchronous = false);
+	public function put($local_file, $remote_file = null, $mode = FTP_ASCII, $asynchronous = false);
 	
 	/**
 	 * Test existence of file/folder on remote server.
