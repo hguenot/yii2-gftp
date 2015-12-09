@@ -258,28 +258,28 @@ class FtpComponent extends \yii\base\Component {
 	/**
 	 * Download a file from FTP server.
 	 *
-	 * @param int       $mode          The transfer mode. Must be either <strong>FTP_ASCII</strong> or <strong>FTP_BINARY</strong>.
 	 * @param string    $remote_file   The remote file path.
 	 * @param string    $local_file    The local file path. If set to <strong>null</strong>, file will be downloaded inside current folder using remote file base name).
+	 * @param int       $mode          The transfer mode. Must be either <strong>FTP_ASCII</strong> or <strong>FTP_BINARY</strong>.
 	 * @param bool      $asynchronous  Flag indicating if file transfert should block php application or not.
 	 *
 	 * @return string The full local path (absolute).
 	 *
 	 * @throws FtpException If an error occcured during file transfert.
 	 */
-	public function get($mode, $remote_file, $local_file = null, $asynchronous = false) {
-		$this->connectIfNeeded();
-		$local_file = $this->handle->get($mode, $remote_file, $local_file, $asynchronous);
-		$this->onFileDownloaded(new Event(['sender' => $this, 'data' => $this->param]));
+	public function get($remote_file, $local_file = null, $mode, $asynchronous = false) {
+		$this->connectIfNeeded();		
+		$local_file = $this->handle->get($remote_file, $local_file,$mode, $asynchronous);
+		$this->onFileDownloaded(new Event(['sender' => $this, 'data' => $local_file]));
 		return $local_file;
 	}
 
 	/**
 	 * Upload a file to the FTP server.
 	 *
-	 * @param int       $mode          The transfer mode. Must be either <strong>FTP_ASCII</strong> or <strong>FTP_BINARY</strong>.
 	 * @param string    $local_file    The local file path.
 	 * @param string    $remote_file   The remote file path. If set to <strong>null</strong>, file will be downloaded inside current folder using local file base name).
+	 * @param int       $mode          The transfer mode. Must be either <strong>FTP_ASCII</strong> or <strong>FTP_BINARY</strong>.
 	 * @param bool      $asynchronous  Flag indicating if file transfert should block php application or not.
 	 *
 	 * @return string The full local path (absolute).
@@ -288,9 +288,8 @@ class FtpComponent extends \yii\base\Component {
 	 */
 	public function put($mode, $local_file, $remote_file = null, $asynchronous = false) {
 		$this->connectIfNeeded();
-		$full_remote_file = $this->handle->put($mode, $local_file, $remote_file, $asynchronous);
+		$full_remote_file = $this->handle->put($local_file, $remote_file, $mode, $asynchronous);
 		$this->onFileUploaded(new Event(['sender' => $this, 'data' => $remote_file]));
-
 		return $full_remote_file;
 	}
 
