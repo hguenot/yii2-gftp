@@ -267,7 +267,7 @@ class FtpComponent extends \yii\base\Component {
 	 *
 	 * @throws FtpException If an error occcured during file transfert.
 	 */
-	public function get($remote_file, $local_file = null, $mode, $asynchronous = false) {
+	public function get($remote_file, $local_file = null, $mode = FTP_ASCII, $asynchronous = false) {
 		$this->connectIfNeeded();		
 		$local_file = $this->handle->get($remote_file, $local_file,$mode, $asynchronous);
 		$this->onFileDownloaded(new Event(['sender' => $this, 'data' => $local_file]));
@@ -286,7 +286,7 @@ class FtpComponent extends \yii\base\Component {
 	 *
 	 * @throws FtpException If an error occcured during file transfert.
 	 */
-	public function put($mode, $local_file, $remote_file = null, $asynchronous = false) {
+	public function put($local_file, $remote_file = null, $mode = FTP_ASCII, $asynchronous = false) {
 		$this->connectIfNeeded();
 		$full_remote_file = $this->handle->put($local_file, $remote_file, $mode, $asynchronous);
 		$this->onFileUploaded(new Event(['sender' => $this, 'data' => $remote_file]));
