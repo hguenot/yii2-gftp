@@ -49,7 +49,7 @@ class FtpComponent extends \yii\base\Component {
 	public function __destruct() {
 		try {
 			$this->close();
-		} catch(Exception $ex){
+		} catch(\Exception $ex){
 			// silently close...
 		}
 	}
@@ -401,7 +401,7 @@ class FtpComponent extends \yii\base\Component {
 	/**
 	 * Raised when connection to FTP server was openned.
 	 *
-	 * @param $event CEvent Event parameter.
+	 * @param $event \yii\base\Event Event parameter.
 	 */
 	public function onConnectionOpen($event) {
 		$this->trigger('onConnectionOpen', $event);
@@ -410,7 +410,7 @@ class FtpComponent extends \yii\base\Component {
 	/**
 	 * Raised when connection to FTP server was closed.
 	 *
-	 * @param $event CEvent Event parameter.
+	 * @param $event \yii\base\Event Event parameter.
 	 */
 	public function onConnectionClose($event) {
 		$this->trigger('onConnectionClose', $event);
@@ -420,7 +420,7 @@ class FtpComponent extends \yii\base\Component {
 	 * Raised when users has logged in on the FTP server.
 	 * Username is stored in : <code>$event->params</code>.
 	 *
-	 * @param $event CEvent Event parameter.
+	 * @param $event \yii\base\Event Event parameter.
 	 */
 	public function onLogin($event) {
 		$this->trigger('onLogin', $event);
@@ -440,7 +440,7 @@ class FtpComponent extends \yii\base\Component {
 	 * Raised when a folder was deleted on FTP server.
 	 * Folder name is stored in : <code>$event->params</code>.
 	 *
-	 * @param $event CEvent Event parameter.
+	 * @param $event \yii\base\Event Event parameter.
 	 */
 	public function onFolderDeleted($event) {
 		$this->trigger('onFolderDeleted', $event);
@@ -450,7 +450,7 @@ class FtpComponent extends \yii\base\Component {
 	 * Raised when current FTP server directory has changed.
 	 * New current folder is stored in : <code>$event->params</code>.
 	 *
-	 * @param $event CEvent Event parameter.
+	 * @param $event \yii\base\Event Event parameter.
 	 */
 	public function onFolderChanged($event) {
 		$this->trigger('onFolderChanged', $event);
@@ -462,7 +462,7 @@ class FtpComponent extends \yii\base\Component {
 	 * Local filename is stored in : <code>$event->params['local_file']</code>.
 	 * Remote filename is stored in : <code>$event->params['remote_file']</code>.
 	 *
-	 * @param $event CEvent Event parameter.
+	 * @param $event \yii\base\Event Event parameter.
 	 */
 	public function onFileDownloaded($event) {
 		$this->trigger('onFileDownloaded', $event);
@@ -474,7 +474,7 @@ class FtpComponent extends \yii\base\Component {
 	 * Local filename is stored in : <code>$event->params['local_file']</code>.
 	 * Remote filename is stored in : <code>$event->params['remote_file']</code>.
 	 *
-	 * @param $event CEvent Event parameter.
+	 * @param $event \yii\base\Event Event parameter.
 	 */
 	public function onFileUploaded($event) {
 		$this->trigger('onFileUploaded', $event);
@@ -486,7 +486,7 @@ class FtpComponent extends \yii\base\Component {
 	 * Remote filename is stored in : <code>$event->params['file']</code>.
 	 * New permisseion are stored in octal value in : <code>$event->params['mode']</code>.
 	 *
-	 * @param $event CEvent Event parameter.
+	 * @param $event \yii\base\Event Event parameter.
 	 */
 	public function onFileModeChanged($event) {
 		$this->trigger('onFileModeChanged', $event);
@@ -496,7 +496,7 @@ class FtpComponent extends \yii\base\Component {
 	 * Raised when a file was deleted on FTP server.
 	 * Remote filename is stored in : <code>$event->params</code>.
 	 *
-	 * @param $event CEvent Event parameter.
+	 * @param $event \yii\base\Event Event parameter.
 	 */
 	public function onFileDeleted($event) {
 		$this->trigger('onFileDeleted', $event);
@@ -507,7 +507,7 @@ class FtpComponent extends \yii\base\Component {
 	 * Old filename is stored in : <code>$event->params['oldname']</code>.
 	 * New filename is stored in : <code>$event->params['newname']</code>.
 	 *
-	 * @param $event CEvent Event parameter.
+	 * @param $event \yii\base\Event Event parameter.
 	 */
 	public function onFileRenamed($event) {
 		$this->trigger('onFileRenamed', $event);
