@@ -90,7 +90,7 @@ More complete example :
 
 ```php
 public function actionExample() { 
-    $remote_file = '/data/users.txt; 
+    $remote_file = '/data/users.txt'; 
     $local_file = '/tmp/users.load'; 
     $mode = 'FTP_ASCII'; 
     $asynchronous = false; 
