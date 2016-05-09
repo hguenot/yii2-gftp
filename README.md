@@ -86,6 +86,19 @@ $files = $gftp->ls();
 $gftp->chdir('images');
 ```
 
+More complete example : 
+
+```php
+public function actionExample() { 
+    $remote_file = '/data/users.txt; 
+    $local_file = '/tmp/users.load'; 
+    $mode = 'FTP_ASCII'; 
+    $asynchronous = false; 
+    $file = Yii::$app->ftp->get($remote_file, $local_file, $mode, $asynchronous); 
+    // [...]
+} 
+```
+
 * Display ftp content in a Widget :
 
 ```php
