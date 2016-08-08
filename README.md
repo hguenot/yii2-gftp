@@ -1,3 +1,7 @@
+[![Latest Stable Version](https://poser.pugx.org/hguenot/yii2-gftp/v/stable)](https://packagist.org/packages/hguenot/yii2-gftp)
+[![Total Downloads](https://poser.pugx.org/hguenot/yii2-gftp/downloads)](https://packagist.org/packages/hguenot/yii2-gftp)
+[![License](https://poser.pugx.org/hguenot/yii2-gftp/license)](https://packagist.org/packages/hguenot/yii2-gftp)
+
 GFtp
 ====
 GFtp is a FTP extension for [YII 2 Framework](http://www.yiiframework.com).
