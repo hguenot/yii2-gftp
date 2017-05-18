@@ -406,7 +406,7 @@ class FtpDriver extends \yii\base\Object implements RemoteDriver {
 		$this->connectIfNeeded();
 
 		$res = ftp_nlist($this->handle, $filename);
-		return $res !== false;
+		return !empty($res);
 	}
 
 	/**
