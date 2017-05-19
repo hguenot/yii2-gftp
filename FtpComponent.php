@@ -258,18 +258,18 @@ class FtpComponent extends \yii\base\Component {
 	/**
 	 * Download a file from FTP server.
 	 *
-	 * @param string    $remote_file   The remote file path.
-	 * @param string    $local_file    The local file path. If set to <strong>null</strong>, file will be downloaded inside current folder using remote file base name).
-	 * @param int       $mode          The transfer mode. Must be either <strong>FTP_ASCII</strong> or <strong>FTP_BINARY</strong>.
-	 * @param bool      $asynchronous  Flag indicating if file transfert should block php application or not.
+	 * @param string $remote_file The remote file path.
+	 * @param string $local_file The local file path. If set to <strong>null</strong>, file will be downloaded inside current folder using remote file base name).
+	 * @param int $mode The transfer mode. Must be either <strong>FTP_ASCII</strong> or <strong>FTP_BINARY</strong>.
+	 * @param bool $asynchronous Flag indicating if file transfert should block php application or not.
+	 * @param callable $asyncFn Async callback function called during download process
 	 *
 	 * @return string The full local path (absolute).
 	 *
-	 * @throws FtpException If an error occcured during file transfert.
 	 */
-	public function get($remote_file, $local_file = null, $mode = FTP_ASCII, $asynchronous = false) {
+	public function get($remote_file, $local_file = null, $mode = FTP_ASCII, $asynchronous = false, callable $asyncFn = null) {
 		$this->connectIfNeeded();		
-		$local_file = $this->handle->get($remote_file, $local_file,$mode, $asynchronous);
+		$local_file = $this->handle->get($remote_file, $local_file,$mode, $asynchronous, $asyncFn);
 		$this->onFileDownloaded(new Event(['sender' => $this, 'data' => $local_file]));
 		return $local_file;
 	}
@@ -281,14 +281,15 @@ class FtpComponent extends \yii\base\Component {
 	 * @param string    $remote_file   The remote file path. If set to <strong>null</strong>, file will be downloaded inside current folder using local file base name).
 	 * @param int       $mode          The transfer mode. Must be either <strong>FTP_ASCII</strong> or <strong>FTP_BINARY</strong>.
 	 * @param bool      $asynchronous  Flag indicating if file transfert should block php application or not.
+	 * @param callable $asyncFn Async callback function called during download process
 	 *
 	 * @return string The full local path (absolute).
 	 *
 	 * @throws FtpException If an error occcured during file transfert.
 	 */
-	public function put($local_file, $remote_file = null, $mode = FTP_ASCII, $asynchronous = false) {
+	public function put($local_file, $remote_file = null, $mode = FTP_ASCII, $asynchronous = false, callable $asyncFn = null) {
 		$this->connectIfNeeded();
-		$full_remote_file = $this->handle->put($local_file, $remote_file, $mode, $asynchronous);
+		$full_remote_file = $this->handle->put($local_file, $remote_file, $mode, $asynchronous, $asyncFn);
 		$this->onFileUploaded(new Event(['sender' => $this, 'data' => $remote_file]));
 		return $full_remote_file;
 	}

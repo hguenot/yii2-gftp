@@ -1,12 +1,9 @@
 <?php
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
 namespace gftp\drivers;
+
+use gftp\FtpException;
+use gftp\FtpFile;
 
 /**
  *
@@ -44,7 +41,7 @@ interface RemoteDriver {
 	 * @param string    $dir           The directory to be listed.
 	 *                                 This parameter can also include arguments, eg. $ftp->ls("-la /your/dir");
 	 *                                 Note that this parameter isn't escaped so there may be some issues with filenames containing spaces and other characters.
-	 * @param string    $full          List full dir description.
+	 * @param boolean   $full          List full dir description.
 	 *
 	 * @return FtpFile[] Array containing list of files.
 	 */
@@ -85,27 +82,28 @@ interface RemoteDriver {
 	 * @param string    $remote_file   The remote file path.
 	 * @param string    $local_file    The local file path. If set to <strong>null</strong>, file will be downloaded inside current folder using remote file base name).
 	 * @param int       $mode          The transfer mode. Must be either <strong>ASCII</strong> or <strong>BINARY</strong>.
-	 * @param bool      $asynchronous  Flag indicating if file transfert should block php application or not.
+	 * @param bool      $asynchronous  Flag indicating if file transfer should block php application or not.
+	 * @param callable  $asyncFn       Async callback function called during download process
 	 *
 	 * @return string The full local path (absolute).
 	 *
 	 * @throws FtpException If an error occcured during file transfert.
 	 */
-	public function get($remote_file, $local_file = null, $mode = FTP_ASCII, $asynchronous = false);
-	
+	public function get($remote_file, $local_file = null, $mode = FTP_ASCII, $asynchronous = false, callable $asyncFn = null);
+
 	/**
 	 * Upload a file to the FTP server.
 	 *
-	 * @param string    $local_file    The local file path.
-	 * @param string    $remote_file   The remote file path. If set to <strong>null</strong>, file will be downloaded inside current folder using local file base name).
-	 * @param int       $mode          The transfer mode. Must be either <strong>ASCII</strong> or <strong>BINARY</strong>.
-	 * @param bool      $asynchronous  Flag indicating if file transfert should block php application or not.
+	 * @param string $local_file The local file path.
+	 * @param string $remote_file The remote file path. If set to <strong>null</strong>, file will be downloaded inside current folder using local file base name).
+	 * @param int $mode The transfer mode. Must be either <strong>ASCII</strong> or <strong>BINARY</strong>.
+	 * @param bool $asynchronous Flag indicating if file transfer should block php application or not.
+	 * @param callable $asyncFn Async callback function called during upload process
 	 *
 	 * @return string The full local path (absolute).
 	 *
-	 * @throws FtpException If an error occcured during file transfert.
 	 */
-	public function put($local_file, $remote_file = null, $mode = FTP_ASCII, $asynchronous = false);
+	public function put($local_file, $remote_file = null, $mode = FTP_ASCII, $asynchronous = false, callable $asyncFn = null);
 	
 	/**
 	 * Test existence of file/folder on remote server.
