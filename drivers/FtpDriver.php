@@ -428,6 +428,7 @@ class FtpDriver extends \yii\base\Object implements RemoteDriver {
 	 */
 	public function get($remote_file, $local_file = null, $mode = FTP_ASCII, $asynchronous = false, callable $asyncFn = null) {
 		$this->connectIfNeeded();
+		$resourceMode = is_resource($local_file);
 
 		if (!isset($local_file) || $local_file == null || !is_string($local_file) || trim($local_file) == "") {
 			$local_file = getcwd() . DIRECTORY_SEPARATOR . basename($remote_file);
@@ -435,7 +436,10 @@ class FtpDriver extends \yii\base\Object implements RemoteDriver {
 		$this->param = array('remote_file' => $remote_file, 'local_file' => $local_file, 'asynchronous' => $asynchronous);
 
 		if ($asynchronous !== true) {
-			if (!ftp_get($this->handle, $local_file, $remote_file, $mode)){
+			$received = $resourceMode
+				? ftp_fget($this->handle, $local_file, $remote_file, $mode)
+				: ftp_get($this->handle, $local_file, $remote_file, $mode);
+			if (!$received){
 				throw new FtpException(
 					Yii::t('gftp', 'Could not synchronously get file "{remote_file}" from server "{host}"', [
 						'host' => $this->host, 'remote_file' => $remote_file
@@ -443,7 +447,9 @@ class FtpDriver extends \yii\base\Object implements RemoteDriver {
 				);
 			}
 		} else {
-			$ret = ftp_nb_get($this->handle, $local_file, $remote_file, $mode);
+			$ret = $resourceMode
+				? ftp_nb_fget($this->handle, $local_file, $remote_file, $mode)
+				: ftp_nb_get($this->handle, $local_file, $remote_file, $mode);
 			$asyncFn = $asyncFn ? $asyncFn : function(){};
 				
 			while ($ret == FTP_MOREDATA) {
@@ -470,13 +476,21 @@ class FtpDriver extends \yii\base\Object implements RemoteDriver {
 	 */
 	public function put($local_file, $remote_file = null, $mode = FTP_ASCII, $asynchronous = false, callable $asyncFn = null) {
 		$this->connectIfNeeded();
-		if (!isset($remote_file) || $remote_file == null || !is_string($remote_file) || trim($remote_file) == "") {
+		$resourceMode = is_resource($local_file);
+		$hasRemoteFile = isset($remote_file) && $remote_file !== null && is_string($remote_file) && trim($remote_file) !== "";
+
+		if ($resourceMode && !$hasRemoteFile) {
+			throw new FtpException(Yii::t('gftp', 'You must specify remote filename if source is resource'));
+		} else if (!$hasRemoteFile) {
 			$remote_file = basename($local_file);
 		}
 		$this->param = array('remote_file' => $remote_file, 'local_file' => $local_file, 'asynchronous' => $asynchronous);
 
 		if ($asynchronous !== true) {
-			if (!ftp_put($this->handle, $remote_file, $local_file, $mode)) {
+			$sent = $resourceMode
+				? ftp_fput($this->handle, $remote_file, $local_file, $mode)
+				: ftp_put($this->handle, $remote_file, $local_file, $mode);
+			if (!$sent) {
 				throw new FtpException(
 					Yii::t('gftp', 'Could not put file "{local_file}" on "{remote_file}" on server "{host}"', [
 						'host' => $this->host, 'remote_file' => $remote_file, 'local_file' => $local_file
@@ -484,7 +498,9 @@ class FtpDriver extends \yii\base\Object implements RemoteDriver {
 				);
 			}
 		} else {
-			$ret = ftp_nb_put($this->handle, $remote_file, $local_file, $mode);
+			$ret = $resourceMode
+				? ftp_nb_fput($this->handle, $remote_file, $local_file, $mode)
+				: ftp_nb_put($this->handle, $remote_file, $local_file, $mode);
 			$asyncFn = $asyncFn ? $asyncFn : function(){};
 
 			while ($ret == FTP_MOREDATA) {

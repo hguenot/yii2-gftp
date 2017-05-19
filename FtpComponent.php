@@ -259,7 +259,7 @@ class FtpComponent extends \yii\base\Component {
 	 * Download a file from FTP server.
 	 *
 	 * @param string $remote_file The remote file path.
-	 * @param string $local_file The local file path. If set to <strong>null</strong>, file will be downloaded inside current folder using remote file base name).
+	 * @param string|resource $local_file The local file path. If set to <strong>null</strong>, file will be downloaded inside current folder using remote file base name).
 	 * @param int $mode The transfer mode. Must be either <strong>FTP_ASCII</strong> or <strong>FTP_BINARY</strong>.
 	 * @param bool $asynchronous Flag indicating if file transfert should block php application or not.
 	 * @param callable $asyncFn Async callback function called during download process
@@ -277,11 +277,11 @@ class FtpComponent extends \yii\base\Component {
 	/**
 	 * Upload a file to the FTP server.
 	 *
-	 * @param string    $local_file    The local file path.
-	 * @param string    $remote_file   The remote file path. If set to <strong>null</strong>, file will be downloaded inside current folder using local file base name).
-	 * @param int       $mode          The transfer mode. Must be either <strong>FTP_ASCII</strong> or <strong>FTP_BINARY</strong>.
-	 * @param bool      $asynchronous  Flag indicating if file transfert should block php application or not.
-	 * @param callable $asyncFn Async callback function called during download process
+	 * @param string|resource  $local_file    The local file path.
+	 * @param string           $remote_file   The remote file path. If set to <strong>null</strong>, file will be downloaded inside current folder using local file base name).
+	 * @param int              $mode          The transfer mode. Must be either <strong>FTP_ASCII</strong> or <strong>FTP_BINARY</strong>.
+	 * @param bool             $asynchronous  Flag indicating if file transfert should block php application or not.
+	 * @param callable         $asyncFn       Async callback function called during download process
 	 *
 	 * @return string The full local path (absolute).
 	 *
