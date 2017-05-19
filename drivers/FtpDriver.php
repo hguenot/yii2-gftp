@@ -404,9 +404,7 @@ class FtpDriver extends \yii\base\Object implements RemoteDriver {
 	 */
 	public function fileExists($filename) {
 		$this->connectIfNeeded();
-
-		$res = ftp_nlist($this->handle, $filename);
-		return !empty($res);
+		return ftp_mdtm($this->handle, $filename) >= 0;
 	}
 
 	/**
@@ -426,9 +424,9 @@ class FtpDriver extends \yii\base\Object implements RemoteDriver {
 	}
 
 	/**
-	 * @see RemoteDriver::get($mode, $remote_file, $local_file, $asynchronous)
+	 * @see RemoteDriver::get($mode, $remote_file, $local_file, $asynchronous, $asyncFn)
 	 */
-	public function get($remote_file, $local_file = null, $mode = FTP_ASCII, $asynchronous = false) {
+	public function get($remote_file, $local_file = null, $mode = FTP_ASCII, $asynchronous = false, callable $asyncFn = null) {
 		$this->connectIfNeeded();
 
 		if (!isset($local_file) || $local_file == null || !is_string($local_file) || trim($local_file) == "") {
@@ -446,27 +444,31 @@ class FtpDriver extends \yii\base\Object implements RemoteDriver {
 			}
 		} else {
 			$ret = ftp_nb_get($this->handle, $local_file, $remote_file, $mode);
+			$asyncFn = $asyncFn ? $asyncFn : function(){};
 				
 			while ($ret == FTP_MOREDATA) {
+				$asyncFn();
+
 				// continue downloading
 				$ret = ftp_nb_continue($this->handle);
 			}
-			if ($ret == FTP_FAILED){
+			if ($ret !== FTP_FINISHED) {
 				throw new FtpException(
 					Yii::t('gftp', 'Could not asynchronously get file "{remote_file}" from server "{host}"', [
 						'host' => $this->host, 'remote_file' => $remote_file
 					])
 				);
 			}
+			$asyncFn();
 		}
 		
 		return realpath($local_file);
 	}
 
 	/**
-	 * @see RemoteDriver::put($mode, $local_file, $remote_file, $asynchronous)
+	 * @see RemoteDriver::put($mode, $local_file, $remote_file, $asynchronous, $asyncFn)
 	 */
-	public function put($local_file, $remote_file = null, $mode = FTP_ASCII, $asynchronous = false) {
+	public function put($local_file, $remote_file = null, $mode = FTP_ASCII, $asynchronous = false, callable $asyncFn = null) {
 		$this->connectIfNeeded();
 		if (!isset($remote_file) || $remote_file == null || !is_string($remote_file) || trim($remote_file) == "") {
 			$remote_file = basename($local_file);
@@ -483,8 +485,10 @@ class FtpDriver extends \yii\base\Object implements RemoteDriver {
 			}
 		} else {
 			$ret = ftp_nb_put($this->handle, $remote_file, $local_file, $mode);
-				
+			$asyncFn = $asyncFn ? $asyncFn : function(){};
+
 			while ($ret == FTP_MOREDATA) {
+				$asyncFn();
 				$ret = ftp_nb_continue($this->handle);
 			}
 				
@@ -495,6 +499,7 @@ class FtpDriver extends \yii\base\Object implements RemoteDriver {
 					])
 				);
 			}
+			$asyncFn();
 		}
 
 		return $remote_file;
