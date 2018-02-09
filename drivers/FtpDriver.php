@@ -12,7 +12,7 @@ use \Yii;
 /**
  * Basic FTP connection driver.
  */
-class FtpDriver extends \yii\base\Object implements RemoteDriver {
+class FtpDriver extends \yii\base\BaseObject implements RemoteDriver {
 	
 	
 	/**
