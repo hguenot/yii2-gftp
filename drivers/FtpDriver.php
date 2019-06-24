@@ -404,7 +404,19 @@ class FtpDriver extends \yii\base\BaseObject implements RemoteDriver {
 	 */
 	public function fileExists($filename) {
 		$this->connectIfNeeded();
-		return ftp_mdtm($this->handle, $filename) >= 0;
+		$mdtm = ftp_mdtm($this->handle, $filename);
+		// ftp_mdtm() does not work with directories.
+		if ($mdtm >= 0) {
+			return true;
+		} else {
+			// https://www.php.net/manual/zh/function.ftp-chdir.php
+			$origin = ftp_pwd($this->handle); 
+			if (@ftp_chdir($this->handle, $filename)) { 
+				ftp_chdir($this->handle, $origin);    
+				return true; 
+			}
+		}
+		return false; 
 	}
 
 	/**
