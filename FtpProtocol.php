@@ -5,54 +5,101 @@ namespace gftp;
 /**
  * Description of FtpProtocol
  *
- * @author herve
+ * @property-read string $protocol Protocol name.
+ * @property-read string $driver Driver class name.
+ * @property-read int $port Default port number.
+ *
+ * @author Herve Guenot
+ * @link http://www.guenot.info
+ * @copyright Copyright &copy; 2015 Herve Guenot
+ * @license GNU LESSER GPL 3
+ * @version 1.0
+ *
+ * @internal
  */
 class FtpProtocol {
-	
+	/** @var FtpProtocol[] All known protocols. */
 	private static $drivers = [];
-	
-	public static function registerDriver($protocol, $driver, $port) {
+
+	/**
+	 * @param string $protocol Protocol name
+	 * @param string $driver Driver class name
+	 * @param int $port Default port
+	 */
+	public static function registerDriver(string $protocol, string $driver, int $port) {
 		$key = strtolower($protocol);
 		self::$drivers[$key] = new FtpProtocol($protocol, $driver, $port);
 	}
-	
-	public static function values() {
-		return self::$drivers;
+
+	/**
+	 * @return FtpProtocol[] All known protocols.
+	 */
+	public static function values(): array {
+		return array_merge([], self::$drivers);
 	}
-	
-	public static function valueOf($protocol) {
+
+	/**
+	 * @param string $protocol Expected protocol name.
+	 *
+	 * @return FtpProtocol|null Found protocol or `null` if not exists
+	 */
+	public static function valueOf(string $protocol): ?FtpProtocol {
 		$key = strtolower($protocol);
-		return isset(self::$drivers[$key]) ? self::$drivers[$key] : null;
+		return array_key_exists($key, self::$drivers) && isset(self::$drivers[$key])
+				? self::$drivers[$key]
+				: null;
 	}
-	
-	private function __construct($protocol, $driver, $port) {
-		$this->protocol = $protocol;
-		$this->driver = $driver;
-		$this->port = $port;
+
+	/**
+	 * @param string $protocol Protocol name
+	 * @param string $driver Driver class name
+	 * @param int $port Default port
+	 */
+	private function __construct(string $protocol, string $driver, int $port) {
+		$this->_protocol = $protocol;
+		$this->_driver = $driver;
+		$this->_port = $port;
 	}
-	
-	private $protocol;
-	private $driver;
-	private $port;
-	
-	public function getProtocol(){
-		return $this->protocol;
+
+	/** @var string Protocol name */
+	private $_protocol;
+
+	/** @var string Driver class name */
+	private $_driver;
+
+	/** @var int Default port */
+	private $_port;
+
+	/**
+	 * @return string Protocol name.
+	 */
+	public function getProtocol(): string {
+		return $this->_protocol;
 	}
-	
-	public function getDriver(){
-		return $this->driver;
+
+	/**
+	 * @return string Driver class name.
+	 */
+	public function getDriver(): string {
+		return $this->_driver;
 	}
-	
-	public function getPort(){
-		return $this->port;
+
+	/**
+	 * @return int Default port
+	 */
+	public function getPort(): int {
+		return $this->_port;
 	}
-	
+
 	public function __get($name) {
-		if ($name == 'protocol')
+		if ($name == 'protocol') {
 			return $this->getProtocol();
-		if ($name == 'driver')
+		}
+		if ($name == 'driver') {
 			return $this->getDriver();
-		if ($name == 'port')
+		}
+		if ($name == 'port') {
 			return $this->getPort();
+		}
 	}
 }

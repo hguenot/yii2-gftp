@@ -2,58 +2,61 @@
 
 namespace gftp;
 
-use \gftp\drivers\RemoteDriver;
-use \Yii;
-use \yii\base\Event;
+use Exception;
+use gftp\drivers\RemoteDriver;
+use Yii;
+use yii\base\Component;
+use yii\base\Event;
+use yii\base\InvalidConfigException;
 
 /**
  * Component used to manage FTP connection
- * 
+ *
  * @author Herve Guenot
  * @link http://www.guenot.info
  * @copyright Copyright &copy; 2012 Herve Guenot
  * @license GNU LESSER GPL 3
  * @version 1.0
  */
-class FtpComponent extends \yii\base\Component {
-	
+class FtpComponent extends Component {
 	/**
 	 * @var RemoteDriver FTP handle.
 	 */
 	private $handle;
-	
 	/**
 	 * @var array Driver options.
 	 */
 	private $driverOptions = [];
-
 	/**
 	 * @var string Connection string
 	 */
 	private $connectionString = null;
 
-	public function init() {
+	/**
+	 * @throws FtpException If connection string is set but not valid.
+	 */
+	public function init(): void {
 		parent::init();
 
 		FtpUtils::registerTranslation();
-		
+
 		if ($this->connectionString != null) {
 			$this->setConnectionString($this->connectionString);
 		}
 		$this->parseConnectionString();
 	}
-	
+
 	/**
 	 * Destructor. Try to close FTP connection.
 	 */
 	public function __destruct() {
 		try {
 			$this->close();
-		} catch(\Exception $ex){
+		} catch (Exception $ex) {
 			// silently close...
 		}
 	}
-		
+
 	/**
 	 * Sets a new connection string. If connection is already openned, try to close it before.
 	 *
@@ -61,31 +64,38 @@ class FtpComponent extends \yii\base\Component {
 	 *
 	 * @throws FtpException if <i>connectionString</i> is not valid or if could not close an already openned connection.
 	 */
-	public function setConnectionString($connectionString) {
+	public function setConnectionString(?string $connectionString): void {
 		if (!isset($connectionString) || !is_string($connectionString) || trim($connectionString) === "") {
 			throw new FtpException(
-				Yii::t('gftp', '{connectString} is not a valid connection string', [ 
-					'connectString' => $connectionString
-				])
+					Yii::t('gftp',
+							'{connectString} is not a valid connection string',
+							[
+									'connectString' => $connectionString
+							])
 			);
 		}
-		
+
 		$this->close();
 		$this->connectionString = $connectionString;
 	}
-	
-	private function parseConnectionString() {
-		if (isset($this->connectionString) && is_string($this->connectionString) && 
-				trim($this->connectionString) !== "") {
+
+	/**
+	 * @throws FtpException if <i>connectionString</i> is not valid
+	 */
+	private function parseConnectionString(): void {
+		if (isset($this->connectionString) && is_string($this->connectionString)
+				&& trim($this->connectionString) !== "") {
 			try {
-				$p = new FtpParser();
+				$p = new FtpConnectionParser();
 				$parts = $p->parse($this->connectionString);
 			} catch (Exception $e) {
 				throw new FtpException(
-					Yii::t('gftp', '{connectString} is not a valid connection string: {message}', [
-						'connectString' => $this->connectionString, 
-						'message' => $e->getMessage()
-					])
+						Yii::t('gftp',
+								'{connectString} is not a valid connection string: {message}',
+								[
+										'connectString' => $this->connectionString,
+										'message' => $e->getMessage()
+								])
 				);
 			}
 
@@ -97,31 +107,29 @@ class FtpComponent extends \yii\base\Component {
 	/**
 	 * Returns the connection string with or without password.
 	 *
-	 * @param bool      $withPassword     if <strong>TRUE</strong>, include password in returned connection string.
-	 *
 	 * @return string Connection string.
 	 */
-	public function getConnectionString($withPassword=false) {
+	public function getConnectionString(): string {
 		return $this->connectionString;
 	}
 
 	/**
 	 * Sets the driver options as an array.
 	 * It must define a 'class' key representing the driver class name.
-	 * 
+	 *
 	 * @param array $driverOptions Driver connection options.
 	 */
-	public function setDriverOptions(array $driverOptions) {
+	public function setDriverOptions(array $driverOptions): void {
 		$this->driverOptions = $driverOptions;
 	}
-	
-	/** 
+
+	/**
 	 * @return array The driver options.
 	 */
-	public function getDriverOptions() {
+	public function getDriverOptions(): array {
 		return $this->driverOptions;
 	}
-	
+
 	// *************************************************************************
 	// UTILITY METHODS
 	// *************************************************************************
@@ -130,18 +138,20 @@ class FtpComponent extends \yii\base\Component {
 	 * Call to {link GFTp::connect} and {@link GTP::login} is not mandatory.
 	 * Must be called in each method, before executing FTP command.
 	 *
-	 * @param bool      $login         Flag indicating if login will be done.
+	 * @param bool $login Flag indicating if login will be done.
+	 *
+	 * @throws FtpException If connection of login onto FTP server failed.
+	 * @throws InvalidConfigException If configuration is not valid
 	 *
 	 * @see GFTp::connect
 	 * @see GFTp::login
-	 *
-	 * @throws FtpException if connection of login onto FTP server failed.
 	 */
-	protected function connectIfNeeded($login = true) {
+	protected function connectIfNeeded(bool $login = true): void {
 		if (!isset($this->handle) || $this->handle == null) {
 			$this->connect();
-			if ($login)
+			if ($login) {
 				$this->login();
+			}
 		}
 	}
 
@@ -151,29 +161,27 @@ class FtpComponent extends \yii\base\Component {
 	/**
 	 * Connect to FTP server.
 	 *
-	 * throws FtpException If connection failed.
+	 * @throws FtpException If connection failed.
+	 * @throws InvalidConfigException If configuration is not valid.
 	 */
-	public function connect() {
+	public function connect(): void {
 		if (isset($this->handle) && $this->handle != null) {
 			$this->close();
 		}
-		
+
 		$this->parseConnectionString();
-		$this->handle = \Yii::createObject($this->driverOptions);
+		$this->handle = Yii::createObject($this->driverOptions);
 		$this->handle->connect();
 		$this->onConnectionOpen(new Event(['sender' => $this]));
 	}
 
-
 	/**
 	 * Log into the FTP server. If connection is not openned, it will be openned before login.
 	 *
-	 * @param string    $user          Username used for log on FTP server.
-	 * @param string    $password      Password used for log on FTP server.
-	 *
-	 * @throws FtpException if connection failed.
+	 * @throws FtpException If connection failed.
+	 * @throws InvalidConfigException If configuration is not valid.
 	 */
-	public function login () {
+	public function login(): void {
 		$this->connectIfNeeded(false);
 		$this->handle->login();
 		$this->onLogin(new Event(['sender' => $this, 'data' => $this->handle->user]));
@@ -182,15 +190,18 @@ class FtpComponent extends \yii\base\Component {
 	/**
 	 * Returns list of files in the given directory.
 	 *
-	 * @param string    $dir           The directory to be listed.
+	 * @param string $dir The directory to be listed.
 	 *                                 This parameter can also include arguments, eg. $ftp->ls("-la /your/dir");
 	 *                                 Note that this parameter isn't escaped so there may be some issues with filenames containing spaces and other characters.
-	 * @param string    $full          List full dir description.
-	 * @param string    $recursive     Recursively list folder content
+	 * @param bool $full List full dir description.
+	 * @param bool $recursive Recursively list folder content
 	 *
 	 * @return FtpFile[] Array containing list of files.
+	 *
+	 * @throws FtpException If an FTP error occurred.
+	 * @throws InvalidConfigException If configuration is not valid.
 	 */
-	public function ls($dir = ".", $full = false, $recursive = false) {
+	public function ls(string $dir = ".", bool $full = false, bool $recursive = false): array {
 		$this->connectIfNeeded();
 		return $this->handle->ls($dir, $full, $recursive);
 	}
@@ -198,9 +209,9 @@ class FtpComponent extends \yii\base\Component {
 	/**
 	 * Close FTP connection.
 	 *
-	 * @throws FtpException Raised when error occured when closing FTP connection.
+	 * @throws FtpException Raised when error occurred when closing FTP connection.
 	 */
-	public function close() {
+	public function close(): void {
 		if (isset($this->handle) && $this->handle != null) {
 			$this->handle->close();
 			$this->handle = false;
@@ -211,11 +222,12 @@ class FtpComponent extends \yii\base\Component {
 	/**
 	 * Create a new folder on FTP server.
 	 *
-	 * @param string    $dir           Folder to create on server (relative or absolute path).
+	 * @param string $dir Folder to create on server (relative or absolute path).
 	 *
 	 * @throws FtpException If folder creation failed.
+	 * @throws InvalidConfigException If configuration is not valid.
 	 */
-	public function mkdir($dir) {
+	public function mkdir(string $dir): void {
 		$this->connectIfNeeded();
 		$this->handle->mkdir($dir);
 		$this->onFolderCreated(new Event(['sender' => $this, 'data' => $dir]));
@@ -224,11 +236,12 @@ class FtpComponent extends \yii\base\Component {
 	/**
 	 * Removes a folder on FTP server.
 	 *
-	 * @param string    $dir           Folder to delete from server (relative or absolute path).
+	 * @param string $dir Folder to delete from server (relative or absolute path).
 	 *
 	 * @throws FtpException If folder deletion failed.
+	 * @throws InvalidConfigException If configuration is not valid.
 	 */
-	public function rmdir($dir) {
+	public function rmdir(string $dir): void {
 		$this->connectIfNeeded();
 		$this->handle->rmdir($dir);
 		$this->onFolderDeleted(new Event(['sender' => $this, 'data' => $dir]));
@@ -237,20 +250,21 @@ class FtpComponent extends \yii\base\Component {
 	/**
 	 * Changes current folder.
 	 *
-	 * @param string    $dir           Folder to move on (relative or absolute path).
+	 * @param string $dir Folder to move on (relative or absolute path).
 	 *
 	 * @return string Current folder on FTP server.
 	 *
 	 * @throws FtpException If folder deletion failed.
+	 * @throws InvalidConfigException If configuration is not valid.
 	 */
-	public function chdir($dir) {
+	public function chdir(string $dir): string {
 		$this->connectIfNeeded();
 		$this->handle->chdir($dir);
 		$this->onFolderChanged(new Event(['sender' => $this, 'data' => $dir]));
 		try {
 			$cwd = $this->pwd();
 		} catch (FtpException $ex) {
-			$cwd = $dir;	
+			$cwd = $dir;
 		}
 		return $cwd;
 	}
@@ -260,16 +274,23 @@ class FtpComponent extends \yii\base\Component {
 	 *
 	 * @param string $remote_file The remote file path.
 	 * @param string|resource $local_file The local file path. If set to <strong>null</strong>, file will be downloaded inside current folder using remote file base name).
-	 * @param int $mode The transfer mode. Must be either <strong>FTP_ASCII</strong> or <strong>FTP_BINARY</strong>.
-	 * @param bool $asynchronous Flag indicating if file transfert should block php application or not.
+	 * @param int $mode The transfer² mode. Must be either <strong>FTP_ASCII</strong> or <strong>FTP_BINARY</strong>.
+	 * @param bool $asynchronous Flag indicating if file transfer should block php application or not.
 	 * @param callable $asyncFn Async callback function called during download process
 	 *
 	 * @return string The full local path (absolute).
 	 *
+	 * @throws FtpException If an FTP error occurred.
+	 * @throws InvalidConfigException If configuration is not valid.
 	 */
-	public function get($remote_file, $local_file = null, $mode = FTP_ASCII, $asynchronous = false, callable $asyncFn = null) {
-		$this->connectIfNeeded();		
-		$local_file = $this->handle->get($remote_file, $local_file,$mode, $asynchronous, $asyncFn);
+	public function get(
+			string $remote_file,
+			$local_file = null,
+			int $mode = FTP_ASCII,
+			bool $asynchronous = false,
+			callable $asyncFn = null): string {
+		$this->connectIfNeeded();
+		$local_file = $this->handle->get($remote_file, $local_file, $mode, $asynchronous, $asyncFn);
 		$this->onFileDownloaded(new Event(['sender' => $this, 'data' => $local_file]));
 		return $local_file;
 	}
@@ -277,17 +298,23 @@ class FtpComponent extends \yii\base\Component {
 	/**
 	 * Upload a file to the FTP server.
 	 *
-	 * @param string|resource  $local_file    The local file path.
-	 * @param string           $remote_file   The remote file path. If set to <strong>null</strong>, file will be downloaded inside current folder using local file base name).
-	 * @param int              $mode          The transfer mode. Must be either <strong>FTP_ASCII</strong> or <strong>FTP_BINARY</strong>.
-	 * @param bool             $asynchronous  Flag indicating if file transfert should block php application or not.
-	 * @param callable         $asyncFn       Async callback function called during download process
+	 * @param string|resource $local_file The local file path.
+	 * @param string $remote_file The remote file path. If set to <strong>null</strong>, file will be downloaded inside current folder using local file base name).
+	 * @param int $mode The transfer mode. Must be either <strong>FTP_ASCII</strong> or <strong>FTP_BINARY</strong>.
+	 * @param bool $asynchronous Flag indicating if file transfer should block php application or not.
+	 * @param callable $asyncFn Async callback function called during download process
 	 *
 	 * @return string The full local path (absolute).
 	 *
-	 * @throws FtpException If an error occcured during file transfert.
+	 * @throws FtpException If an error occurred during file transfer.
+	 * @throws InvalidConfigException If configuration is not valid.
 	 */
-	public function put($local_file, $remote_file = null, $mode = FTP_ASCII, $asynchronous = false, callable $asyncFn = null) {
+	public function put(
+			$local_file,
+			?string $remote_file = null,
+			int $mode = FTP_ASCII,
+			bool $asynchronous = false,
+			callable $asyncFn = null): string {
 		$this->connectIfNeeded();
 		$full_remote_file = $this->handle->put($local_file, $remote_file, $mode, $asynchronous, $asyncFn);
 		$this->onFileUploaded(new Event(['sender' => $this, 'data' => $remote_file]));
@@ -296,12 +323,15 @@ class FtpComponent extends \yii\base\Component {
 
 	/**
 	 * Test existence of file/folder on remote server.
-	 * 
+	 *
 	 * @param string $filename File or folder path to test existence.
-	 * 
-	 * @return boolean `true` if file exists, `false` otherwise.
+	 *
+	 * @return bool `true` if file exists, `false` otherwise.
+	 *
+	 * @throws FtpException If an error occurred during file transfer.
+	 * @throws InvalidConfigException If configuration is not valid.
 	 */
-	public function fileExists($filename) {
+	public function fileExists(string $filename): bool {
 		$this->connectIfNeeded();
 		return $this->handle->fileExists($filename);
 	}
@@ -309,11 +339,12 @@ class FtpComponent extends \yii\base\Component {
 	/**
 	 * Deletes specified files from FTP server.
 	 *
-	 * @param string    $path          The file to delete.
+	 * @param string $path The file to delete.
 	 *
 	 * @throws FtpException If file could not be deleted.
+	 * @throws InvalidConfigException If configuration is not valid.
 	 */
-	public function delete($path) {
+	public function delete(string $path): void {
 		$this->connectIfNeeded();
 		$this->handle->delete($path);
 		$this->onFileDeleted(new Event(['sender' => $this, 'data' => $path]));
@@ -322,13 +353,14 @@ class FtpComponent extends \yii\base\Component {
 	/**
 	 * Retrieves the file size in bytes.
 	 *
-	 * @param string    $path          The file to delete.
+	 * @param string $path The file to delete.
 	 *
 	 * @return int File size.
 	 *
-	 * @throws FtpException If an error occured while retrieving file size.
+	 * @throws FtpException If an error occurred while retrieving file size.
+	 * @throws InvalidConfigException If configuration is not valid.
 	 */
-	public function size($path) {
+	public function size(string $path): int {
 		$this->connectIfNeeded();
 		return $this->handle->size($path);
 	}
@@ -336,30 +368,34 @@ class FtpComponent extends \yii\base\Component {
 	/**
 	 * Renames a file or a directory on the FTP server.
 	 *
-	 * @param string    $oldname       The old file/directory name.
-	 * @param string    $newname       The new name.
+	 * @param string $oldname The old file/directory name.
+	 * @param string $newname The new name.
 	 *
-	 * @throws FtpException If an error occured while renaming file or folder.
+	 * @throws FtpException If an error occurred while renaming file or folder.
+	 * @throws InvalidConfigException If configuration is not valid.
 	 */
-	public function rename($oldname, $newname) {
+	public function rename(string $oldname, string $newname): void {
 		$this->connectIfNeeded();
 		$this->handle->rename($oldname, $newname);
 		$this->onFileRenamed(
-			new Event(['sender' => $this, 'data' => [
-				'oldname' => $oldname, 
-				'newname' => $newname
-			]])
+				new Event([
+						'sender' => $this,
+						'data' => [
+								'oldname' => $oldname,
+								'newname' => $newname
+						]])
 		);
 	}
 
 	/**
 	 * Returns the current directory name.
 	 *
-	 * @return The current directory name.
+	 * @return string The current directory name.
 	 *
-	 * @throws FtpException If an error occured while getting current folder name.
+	 * @throws FtpException If an error occurred while getting current folder name.
+	 * @throws InvalidConfigException If configuration is not valid.
 	 */
-	public function pwd() {
+	public function pwd(): string {
 		$this->connectIfNeeded();
 		return $this->handle->pwd();
 	}
@@ -367,31 +403,36 @@ class FtpComponent extends \yii\base\Component {
 	/**
 	 * Set permissions on a file via FTP.
 	 *
-	 * @param string    $mode          The new permissions, given as an <strong>octal</strong> value.
-	 * @param string    $file          The remote file.
+	 * @param string $mode The new permissions, given as an <strong>octal</strong> value.
+	 * @param string $file The remote file.
 	 *
 	 * @throws FtpException If couldn't set file permission.
+	 * @throws InvalidConfigException If configuration is not valid.
 	 */
-	public function chmod($mode, $file) {
+	public function chmod($mode, $file): void {
 		$this->connectIfNeeded();
 		$this->handle->chmod($mode, $file);
 		$this->onFileModeChanged(
-			new Event(['sender' => $this, 'data' => [
-				'mode' => $mode, 'file' => $file
-			]])
+				new Event([
+						'sender' => $this,
+						'data' => [
+								'mode' => $mode,
+								'file' => $file
+						]])
 		);
 	}
 
 	/**
 	 * Gets the last modified time for a remote file.
 	 *
-	 * @param string    $path          The file from which to extract the last modification time.
+	 * @param string $path The file from which to extract the last modification time.
 	 *
 	 * @return string The last modified time as a Unix timestamp on success.
 	 *
 	 * @throws FtpException If could not retrieve the last modification time of a file.
+	 * @throws InvalidConfigException If configuration is not valid.
 	 */
-	public function mdtm($path) {
+	public function mdtm($path): string {
 		$this->connectIfNeeded();
 		return $this->handle->mdtm($path);
 	}
@@ -400,20 +441,20 @@ class FtpComponent extends \yii\base\Component {
 	 * EVENTS SECTION
 	 */
 	/**
-	 * Raised when connection to FTP server was openned.
+	 * Raised when connection to FTP server was opened.
 	 *
-	 * @param $event \yii\base\Event Event parameter.
+	 * @param $event Event Event parameter.
 	 */
-	public function onConnectionOpen($event) {
+	public function onConnectionOpen($event): void {
 		$this->trigger('onConnectionOpen', $event);
 	}
 
 	/**
 	 * Raised when connection to FTP server was closed.
 	 *
-	 * @param $event \yii\base\Event Event parameter.
+	 * @param $event Event Event parameter.
 	 */
-	public function onConnectionClose($event) {
+	public function onConnectionClose($event): void {
 		$this->trigger('onConnectionClose', $event);
 	}
 
@@ -421,9 +462,9 @@ class FtpComponent extends \yii\base\Component {
 	 * Raised when users has logged in on the FTP server.
 	 * Username is stored in : <code>$event->params</code>.
 	 *
-	 * @param $event \yii\base\Event Event parameter.
+	 * @param $event Event Event parameter.
 	 */
-	public function onLogin($event) {
+	public function onLogin($event): void {
 		$this->trigger('onLogin', $event);
 	}
 
@@ -431,9 +472,9 @@ class FtpComponent extends \yii\base\Component {
 	 * Raised when a folder was created on FTP server.
 	 * Folder name is stored in : <code>$event->params</code>.
 	 *
-	 * @param $event CEvent Event parameter.
+	 * @param $event Event Event parameter.
 	 */
-	public function onFolderCreated($event) {
+	public function onFolderCreated($event): void {
 		$this->trigger('onFolderCreated', $event);
 	}
 
@@ -441,9 +482,9 @@ class FtpComponent extends \yii\base\Component {
 	 * Raised when a folder was deleted on FTP server.
 	 * Folder name is stored in : <code>$event->params</code>.
 	 *
-	 * @param $event \yii\base\Event Event parameter.
+	 * @param $event Event Event parameter.
 	 */
-	public function onFolderDeleted($event) {
+	public function onFolderDeleted($event): void {
 		$this->trigger('onFolderDeleted', $event);
 	}
 
@@ -451,9 +492,9 @@ class FtpComponent extends \yii\base\Component {
 	 * Raised when current FTP server directory has changed.
 	 * New current folder is stored in : <code>$event->params</code>.
 	 *
-	 * @param $event \yii\base\Event Event parameter.
+	 * @param $event Event Event parameter.
 	 */
-	public function onFolderChanged($event) {
+	public function onFolderChanged($event): void {
 		$this->trigger('onFolderChanged', $event);
 	}
 
@@ -463,9 +504,9 @@ class FtpComponent extends \yii\base\Component {
 	 * Local filename is stored in : <code>$event->params['local_file']</code>.
 	 * Remote filename is stored in : <code>$event->params['remote_file']</code>.
 	 *
-	 * @param $event \yii\base\Event Event parameter.
+	 * @param $event Event Event parameter.
 	 */
-	public function onFileDownloaded($event) {
+	public function onFileDownloaded($event): void {
 		$this->trigger('onFileDownloaded', $event);
 	}
 
@@ -475,9 +516,9 @@ class FtpComponent extends \yii\base\Component {
 	 * Local filename is stored in : <code>$event->params['local_file']</code>.
 	 * Remote filename is stored in : <code>$event->params['remote_file']</code>.
 	 *
-	 * @param $event \yii\base\Event Event parameter.
+	 * @param $event Event Event parameter.
 	 */
-	public function onFileUploaded($event) {
+	public function onFileUploaded($event): void {
 		$this->trigger('onFileUploaded', $event);
 	}
 
@@ -487,9 +528,9 @@ class FtpComponent extends \yii\base\Component {
 	 * Remote filename is stored in : <code>$event->params['file']</code>.
 	 * New permisseion are stored in octal value in : <code>$event->params['mode']</code>.
 	 *
-	 * @param $event \yii\base\Event Event parameter.
+	 * @param $event Event Event parameter.
 	 */
-	public function onFileModeChanged($event) {
+	public function onFileModeChanged($event): void {
 		$this->trigger('onFileModeChanged', $event);
 	}
 
@@ -497,9 +538,9 @@ class FtpComponent extends \yii\base\Component {
 	 * Raised when a file was deleted on FTP server.
 	 * Remote filename is stored in : <code>$event->params</code>.
 	 *
-	 * @param $event \yii\base\Event Event parameter.
+	 * @param $event Event Event parameter.
 	 */
-	public function onFileDeleted($event) {
+	public function onFileDeleted($event): void {
 		$this->trigger('onFileDeleted', $event);
 	}
 
@@ -508,10 +549,9 @@ class FtpComponent extends \yii\base\Component {
 	 * Old filename is stored in : <code>$event->params['oldname']</code>.
 	 * New filename is stored in : <code>$event->params['newname']</code>.
 	 *
-	 * @param $event \yii\base\Event Event parameter.
+	 * @param $event Event Event parameter.
 	 */
-	public function onFileRenamed($event) {
+	public function onFileRenamed($event): void {
 		$this->trigger('onFileRenamed', $event);
 	}
-	
 }

@@ -2,197 +2,196 @@
 
 namespace gftp\drivers;
 
-use gftp\FtpException;
 use gftp\converter\FtpFileListConverter;
 use gftp\converter\FtpUnixFileListConverter;
 use gftp\converter\FtpWindowsFileListConverter;
 use gftp\converter\SimpleFileListConverter;
-use \Yii;
+use gftp\FtpException;
+use gftp\FtpUtils;
+use Yii;
+use yii\base\BaseObject;
+use function set_error_handler;
 
 /**
  * Basic FTP connection driver.
+ *
+ * @property string $host
+ * @property int $port
+ * @property int $user
+ * @property-write string|null $password
+ * @property FtpFileListConverter $fileListConverter
+ * @property bool $passive
+ * @property int $timeout
  */
-class FtpDriver extends \yii\base\BaseObject implements RemoteDriver {
-	
-	
+class FtpDriver extends BaseObject implements RemoteDriver {
 	/**
-	 * @var   mixed     FTP handle.
+	 * @var mixed FTP handle.
 	 */
-	protected $handle;
-	
+	protected $_handle;
 	/**
-	 * @var   string    FTP hostname.
+	 * @var string FTP hostname.
 	 */
-	private $host = 'localhost';
+	private $_host = 'localhost';
+	/**
+	 * @var int FTP port.
+	 */
+	private $_port = 21;
+	/**
+	 * @var string FTP username.
+	 */
+	private $_user = 'anonymous';
+	/**
+	 * @var string|null FTP password.
+	 */
+	private $_pass = '';
+	/**
+	 * @var FtpFileListConverter Converts string array in FtpFile array.
+	 */
+	private $_fileListConverter;
+	/**
+	 * @var integer Connection timeout in seconds.
+	 */
+	private $_timeout = 30;
+	/**
+	 * @var bool Connect in passive mode
+	 */
+	private $_passive = true;
+	/**
+	 * @var mixed Used for passing data to error handling function.
+	 */
+	private $_param = '';
 
 	/**
-	 * @var   string    FTP port.
+	 * @inheritDoc
 	 */
-	private $port = 21;
-
-	/**
-	 * @var   string    FTP username.
-	 */
-	private $user = 'anonymous';
-
-	/**
-	 * @var   string    FTP password.
-	 */
-	private $pass = '';
-
-	/**
-	 * @var   FtpFileListConverter Converts string array in FtpFile array.
-	 */
-	private $fileListConverter;
-
-	/**
-	 * @var   integer      Connection timeout in seconds.
-	 */
-	private $timeout = 30;
-
-	/**
-	 * @var   bool      Connect in passive mode
-	 */
-	private $passive = true;
-
-	/**
-	 * @var   mixed     Used for passing data to error hanling function.
-	 */
-	private $param = '';
-
-	// *************************************************************************
-	// DRIVER INITIALIZATION
-	// *************************************************************************
 	public function init() {
 		parent::init();
-		
+
 		self::registerErrorHandler();
-		\gftp\FtpUtils::registerTranslation();
+		FtpUtils::registerTranslation();
 	}
-	
-	// *************************************************************************
-	// ACCESSORS
-	// *************************************************************************
+
 	/**
 	 * Changing FTP host name or IP
-	 * 
+	 *
 	 * @param string $host New hostname
+	 *
+	 * @throws FtpException If closing current connection failed
 	 */
-	public function setHost(/* string */ $host) {
+	public function setHost(string $host): void {
 		// Close connection before changing host.
-		if ($this->host !== $host) {
+		if ($this->_host !== $host) {
 			$this->close();
-			$this->host = $host;
+			$this->_host = $host;
 		}
 	}
-	
+
 	/**
 	 * @return string The current FTP host.
 	 */
-	public function getHost() {
-		return $this->host;
+	public function getHost(): string {
+		return $this->_host;
 	}
-	
+
 	/**
 	 * Changing FTP port.
-	 * 
+	 *
 	 * @param integer $port New hostname
+	 *
+	 * @throws FtpException If closing current connection failed
 	 */
-	public function setPort(/* integer */ $port) {
+	public function setPort(int $port): void {
 		// Close connection before changing port.
-		if ($this->port !== $port) {
+		if ($this->_port !== $port) {
 			$this->close();
-			$this->port = $port;
+			$this->_port = $port;
 		}
 	}
-	
+
 	/**
 	 * @return integer The current FTP port.
 	 */
-	public function getPort() {
-		return $this->port;
+	public function getPort(): int {
+		return $this->_port;
 	}
-	
+
 	/**
 	 * Changing FTP connecting username.
-	 * 
+	 *
 	 * @param string $user New username
+	 *
+	 * @throws FtpException If closing current connection failed
 	 */
-	public function setUser(/* string */ $user) {
+	public function setUser(string $user): void {
 		// Close connection before changing username.
-		if ($this->user !== $user) {
+		if ($this->_user !== $user) {
 			$this->close();
-			$this->user = $user;
+			$this->_user = $user;
 		}
 	}
-	
+
 	/**
 	 * @return string The FTP connecting username.
 	 */
-	public function getUser() {
-		return $this->user;
+	public function getUser(): string {
+		return $this->_user;
 	}
-	
+
 	/**
 	 * Changing FTP password.
-	 * 
-	 * @param string $pass New password
+	 *
+	 * @param string|null $pass New password
+	 *
+	 * @throws FtpException If closing current connection failed
 	 */
-	public function setPass(/* string */ $pass) {
+	public function setPass(?string $pass): void {
 		// Close connection before changing password.
-		if ($this->pass !== $pass) {
+		if ($this->_pass !== $pass) {
 			$this->close();
-			$this->pass = $pass;
+			$this->_pass = $pass;
 		}
 	}
-	
-	/**
-	 * @return string The FTP password.
-	 */
-	public function getPass() {
-		return $this->pass;
-	}
-	
+
 	/**
 	 * Changing FTP passive mode.
-	 * 
-	 * @param boolean $passive Set passive mode
-	 * 
+	 *
+	 * @param bool $passive Set passive mode
+	 *
 	 * @throws FtpException if passive mode could not be set.
 	 */
-	public function setPassive(/* boolean */ $passive) {
+	public function setPassive(bool $passive): void {
 		// Close connection before changing password.
-		if ($this->passive !== $passive) {
-			$this->passive = $passive;
-			if (isset($this->handle) && $this->handle != null) {
-				$this->pasv($this->passive);
+		if ($this->_passive !== $passive) {
+			$this->_passive = $passive;
+			if (isset($this->_handle) && $this->_handle != null) {
+				$this->pasv($this->_passive);
 			}
 		}
 	}
-	
+
 	/**
-	 * @return boolean FTP passive mode.
+	 * @return bool FTP passive mode.
 	 */
-	public function getPassive() {
-		return $this->passive;
+	public function getPassive(): bool {
+		return $this->_passive;
 	}
-	
+
 	/**
 	 * Changing connection timeout in seconds.
-	 * 
+	 *
 	 * @param integer $timeout Set passive mode
 	 */
-	public function setTimeout(/* integer */ $timeout) {
-		$this->timeout = $timeout;
+	public function setTimeout(int $timeout): void {
+		$this->_timeout = $timeout;
 	}
-	
+
 	/**
 	 * @return integer FTP connection timeout.
 	 */
-	public function getTimeout() {
-		return $this->timeout;
+	public function getTimeout(): int {
+		return $this->_timeout;
 	}
-	
+
 	/**
 	 * Returns the file list converter used to convert full file list (string array) in FtpFile array.
 	 *
@@ -200,37 +199,35 @@ class FtpDriver extends \yii\base\BaseObject implements RemoteDriver {
 	 *
 	 * @see Ftp::ls
 	 */
-	public function getFileListConverter() {
-		return $this->fileListConverter;
+	public function getFileListConverter(): FtpFileListConverter {
+		return $this->_fileListConverter;
 	}
 
 	/**
 	 * Change the current file list converter.
 	 *
 	 * @param FtpFileListConverter $fileListConverter the new file list converter.
-	 *
-	 * @throws \yii\base\Exception If type of $fileListConverter is not valid.
 	 */
-	public function setFileListConverter(FtpFileListConverter $fileListConverter) {
-		$this->fileListConverter = $fileListConverter;
+	public function setFileListConverter(FtpFileListConverter $fileListConverter): void {
+		$this->_fileListConverter = $fileListConverter;
 	}
 
-	// *************************************************************************
-	// FTP DRIVER METHODS
-	// *************************************************************************
 	/**
-	 * @see RemoteDriver::connect()
+	 * @inheritDoc
 	 */
-	public function connect() {
-		if (isset($this->handle) && $this->handle != null) {
+	public function connect(): void {
+		if (isset($this->_handle) && $this->_handle != null) {
 			$this->close();
 		}
-		$this->handle = ftp_connect($this->host, $this->port, $this->timeout);
-		if ($this->handle === false) {
+		$this->_handle = ftp_connect($this->_host, $this->_port, $this->_timeout);
+		if ($this->_handle === false) {
 			throw new FtpException(
-				Yii::t('gftp', 'Could not connect to FTP server "{host}" on port "{port}"', [
-					'host' => $this->host, 'port' => $this->port
-				])
+					Yii::t('gftp',
+							'Could not connect to FTP server "{host}" on port "{port}"',
+							[
+									'host' => $this->_host,
+									'port' => $this->_port
+							])
 			);
 		} else {
 			if (strtolower($this->systype()) == 'unix') {
@@ -242,64 +239,77 @@ class FtpDriver extends \yii\base\BaseObject implements RemoteDriver {
 	}
 
 	/**
-	 * @see RemoteDriver::login()
+	 * @inheritDoc
 	 */
-	public function login() {
+	public function login(): void {
 		$this->connectIfNeeded(false);
-		if (ftp_login($this->handle, $this->user, $this->pass) === false) {
+		if (ftp_login($this->_handle, $this->_user, $this->_pass) === false) {
 			throw new FtpException(
-				Yii::t('gftp', 'Could not login to FTP server "{host}" on port "{port}" with user "{user}"', [
-					'host' => $this->host, 'port' => $this->port, 'user' => $this->user
-				])
+					Yii::t('gftp',
+							'Could not login to FTP server "{host}" on port "{port}" with user "{user}"',
+							[
+									'host' => $this->_host,
+									'port' => $this->_port,
+									'user' => $this->_user
+							])
 			);
-		} else if ($this->passive) {
-			try {
-				$this->pasv($this->passive);
-			}catch(FtpException $e){
+		} else {
+			if ($this->_passive) {
+				try {
+					$this->pasv($this->_passive);
+				} catch (FtpException $e) {
 
+				}
 			}
 		}
 	}
 
 	/**
-	 * @see RemoteDriver::close()
+	 * @inheritDoc
 	 */
-	public function close() {
-		if (isset($this->handle) && $this->handle != null) {
-			if (!ftp_close($this->handle)) {
+	public function close(): void {
+		if (isset($this->_handle) && $this->_handle != null) {
+			if (!ftp_close($this->_handle)) {
 				throw new FtpException(
-					Yii::t('gftp', 'Could not close connection to FTP server "{host}" on port "{port}"', [
-						'host' => $this->host, 'port' => $this->port
-					])
+						Yii::t('gftp',
+								'Could not close connection to FTP server "{host}" on port "{port}"',
+								[
+										'host' => $this->_host,
+										'port' => $this->_port
+								])
 				);
 			} else {
-				$this->handle = false;
+				$this->_handle = false;
 			}
 		}
 	}
 
 	/**
-	 * @see RemoteDriver::ls($dir, $full, $recursive)
+	 * @inheritDoc
 	 */
-	public function ls($dir = ".", $full = false, $recursive = false) {
+	public function ls(string $dir = '.', bool $full = false, bool $recursive = false): array {
 		$this->connectIfNeeded();
-		$this->param = $dir;
-		$fileListConverter = $this->fileListConverter;
+		$this->_param = $dir;
+		$fileListConverter = $this->_fileListConverter;
 
-		$res = array();
 		if (!$full) {
-			$opts = $recursive ? "-R " : "";
-			$res = ftp_nlist($this->handle, $opts.$dir);
+			$opts = $recursive
+					? "-R "
+					: "";
+			$res = ftp_nlist($this->_handle, $opts . $dir);
 			$fileListConverter = new SimpleFileListConverter();
 		} else {
-			$res = ftp_rawlist($this->handle, $dir, $recursive);
+			$res = ftp_rawlist($this->_handle, $dir, $recursive);
 		}
 
 		if ($res === false) {
 			throw new FtpException(
-				Yii::t('gftp', 'Could not read folder "{folder}" on server "{host}"', [
-					'host' => $this->host, 'folder' => $dir
-				])
+					Yii::t('gftp',
+							'Could not read folder "{folder}" on server "{host}"',
+							[
+									'host' => $this->_host,
+									'folder' => $dir
+							])
 			);
 		}
 
@@ -307,17 +317,19 @@ class FtpDriver extends \yii\base\BaseObject implements RemoteDriver {
 	}
 
 	/**
-	 * @see RemoteDriver::pwd()
+	 * @inheritDoc
 	 */
-	public function pwd() {
+	public function pwd(): string {
 		$this->connectIfNeeded();
 
-		$dir = ftp_pwd($this->handle);
+		$dir = ftp_pwd($this->_handle);
 		if ($dir === false) {
 			throw new FtpException(
-				Yii::t('gftp', 'Could not get current folder on server "{host}"', [
-					'host' => $this->host
-				])
+					Yii::t('gftp',
+							'Could not get current folder on server "{host}"',
+							[
+									'host' => $this->_host
+							])
 			);
 		}
 
@@ -325,243 +337,303 @@ class FtpDriver extends \yii\base\BaseObject implements RemoteDriver {
 	}
 
 	/**
-	 * @see RemoteDriver::chdir($dir)
+	 * @inheritDoc
 	 */
-	public function chdir($dir) {
+	public function chdir(string $dir): string {
 		$this->connectIfNeeded();
-		$this->param = $dir;
+		$this->_param = $dir;
 
-		if (!ftp_chdir($this->handle, $dir)) {
+		if (!ftp_chdir($this->_handle, $dir)) {
 			throw new FtpException(
-				Yii::t('gftp', 'Could not go to "{folder}" on server "{host}"', [
-					'host' => $this->host, 'folder' => $dir
-				])
+					Yii::t('gftp',
+							'Could not go to "{folder}" on server "{host}"',
+							[
+									'host' => $this->_host,
+									'folder' => $dir
+							])
 			);
 		}
 
 		try {
 			$path = $this->pwd();
 		} catch (FtpException $ex) {
-			$path = $dir;	
+			$path = $dir;
 		}
 		return $path;
 	}
 
 	/**
-	 * @see RemoteDriver::mkdir($dir)
+	 * @inheritDoc
 	 */
-	public function mkdir($dir) {
+	public function mkdir(string $dir): void {
 		$this->connectIfNeeded();
-		$this->param = $dir;
+		$this->_param = $dir;
 
-		if (!ftp_mkdir($this->handle, $dir)) {
+		if (!ftp_mkdir($this->_handle, $dir)) {
 			throw new FtpException(
-				Yii::t('gftp', 'An error occured while creating folder "{folder}" on server "{host}"', [
-					'host' => $this->host, 'folder' => $dir
-				])
+					Yii::t('gftp',
+							'An error occured while creating folder "{folder}" on server "{host}"',
+							[
+									'host' => $this->_host,
+									'folder' => $dir
+							])
 			);
 		}
 	}
 
 	/**
-	 * @see RemoteDriver::rmdir($dir)
+	 * @inheritDoc
 	 */
-	public function rmdir($dir) {
+	public function rmdir(string $dir): void {
 		$this->connectIfNeeded();
-		$this->param = $dir;
+		$this->_param = $dir;
 
-		if (!ftp_rmdir($this->handle, $dir)) {
+		if (!ftp_rmdir($this->_handle, $dir)) {
 			throw new FtpException(
-				Yii::t('gftp', 'An error occured while removing folder "{folder}" on server "{host}"', [
-					'host' => $this->host, 'folder' => $dir
-				])
+					Yii::t('gftp',
+							'An error occured while removing folder "{folder}" on server "{host}"',
+							[
+									'host' => $this->_host,
+									'folder' => $dir
+							])
 			);
 		}
 	}
 
 	/**
-	 * @see RemoteDriver::chmod($mode, $file)
+	 * @inheritDoc
 	 */
-	public function chmod($mode, $file) {
+	public function chmod(string $mode, string $file): void {
 		$this->connectIfNeeded();
 		if (substr($mode, 0, 1) != '0') {
-			$mode = (int) (octdec ( str_pad ( $mode, 4, '0', STR_PAD_LEFT ) ));
+			$mode = (int)(octdec(str_pad($mode, 4, '0', STR_PAD_LEFT)));
 		}
 
-		$this->param = array('mode' => $mode, 'file' => $file);
+		$this->_param = ['mode' => $mode, 'file' => $file];
 
-		if (!ftp_chmod($this->handle, $mode, $file)) {
+		if (!ftp_chmod($this->_handle, $mode, $file)) {
 			throw new FtpException(
-				Yii::t('gftp', 'Could change mode (to "{mode}") of file "{file}" on server "{host}"', [
-					'host' => $this->host, 'file' => $file, '{mode}' => $mode
-				])
+					Yii::t('gftp',
+							'Could change mode (to "{mode}") of file "{file}" on server "{host}"',
+							[
+									'host' => $this->_host,
+									'file' => $file,
+									'{mode}' => $mode
+							])
 			);
 		}
 	}
 
 	/**
-	 * @see RemoteDriver::fileExists($filename)
+	 * @inheritDoc
 	 */
-	public function fileExists($filename) {
+	public function fileExists(string $filename): bool {
 		$this->connectIfNeeded();
-		$mdtm = ftp_mdtm($this->handle, $filename);
+		$mdtm = ftp_mdtm($this->_handle, $filename);
 		// ftp_mdtm() does not work with directories.
 		if ($mdtm >= 0) {
 			return true;
 		} else {
 			// https://www.php.net/manual/zh/function.ftp-chdir.php
-			$origin = ftp_pwd($this->handle); 
-			if (@ftp_chdir($this->handle, $filename)) { 
-				ftp_chdir($this->handle, $origin);    
-				return true; 
+			$origin = ftp_pwd($this->_handle);
+			if (@ftp_chdir($this->_handle, $filename)) {
+				ftp_chdir($this->_handle, $origin);
+				return true;
 			}
 		}
-		return false; 
+		return false;
 	}
 
 	/**
-	 * @see RemoteDriver::delete($path)
+	 * @inheritDoc
 	 */
-	public function delete($path) {
+	public function delete(string $path): void {
 		$this->connectIfNeeded();
-		$this->param = $path;
+		$this->_param = $path;
 
-		if (!ftp_delete($this->handle, $path)) {
+		if (!ftp_delete($this->_handle, $path)) {
 			throw new FtpException(
-				Yii::t('gftp', 'Could not delete file "{file}" on server "{host}"', [
-					'host' => $this->host, 'file' => $path
-				])
+					Yii::t('gftp',
+							'Could not delete file "{file}" on server "{host}"',
+							[
+									'host' => $this->_host,
+									'file' => $path
+							])
 			);
 		}
 	}
 
 	/**
-	 * @see RemoteDriver::get($mode, $remote_file, $local_file, $asynchronous, $asyncFn)
+	 * @inheritDoc
 	 */
-	public function get($remote_file, $local_file = null, $mode = FTP_ASCII, $asynchronous = false, callable $asyncFn = null) {
+	public function get(
+			string $remote_file,
+			$local_file = null,
+			int $mode = FTP_ASCII,
+			bool $asynchronous = false,
+			callable $asyncFn = null): void {
 		$this->connectIfNeeded();
 		$resourceMode = is_resource($local_file);
 
-		if (!isset($local_file) || $local_file == null || !is_string($local_file) || trim($local_file) == "") {
+		if (!isset($local_file) || $local_file === null || !is_string($local_file) || trim($local_file) === '') {
 			$local_file = getcwd() . DIRECTORY_SEPARATOR . basename($remote_file);
 		}
-		$this->param = array('remote_file' => $remote_file, 'local_file' => $local_file, 'asynchronous' => $asynchronous);
+		$this->_param = [
+				'remote_file' => $remote_file,
+				'local_file' => $local_file,
+				'asynchronous' => $asynchronous];
 
 		if ($asynchronous !== true) {
+			/** @noinspection PhpParamsInspection */
 			$received = $resourceMode
-				? ftp_fget($this->handle, $local_file, $remote_file, $mode)
-				: ftp_get($this->handle, $local_file, $remote_file, $mode);
-			if (!$received){
+					? ftp_fget($this->_handle, $local_file, $remote_file, $mode)
+					: ftp_get($this->_handle, $local_file, $remote_file, $mode);
+			if (!$received) {
 				throw new FtpException(
-					Yii::t('gftp', 'Could not synchronously get file "{remote_file}" from server "{host}"', [
-						'host' => $this->host, 'remote_file' => $remote_file
-					])
+						Yii::t('gftp',
+								'Could not synchronously get file "{remote_file}" from server "{host}"',
+								[
+										'host' => $this->_host,
+										'remote_file' => $remote_file
+								])
 				);
 			}
 		} else {
+			/** @noinspection PhpParamsInspection */
 			$ret = $resourceMode
-				? ftp_nb_fget($this->handle, $local_file, $remote_file, $mode)
-				: ftp_nb_get($this->handle, $local_file, $remote_file, $mode);
-			$asyncFn = $asyncFn ? $asyncFn : function(){};
-				
+					? ftp_nb_fget($this->_handle, $local_file, $remote_file, $mode)
+					: ftp_nb_get($this->_handle, $local_file, $remote_file, $mode);
+			$asyncFn = $asyncFn
+					? $asyncFn
+					: function () {
+					};
+
 			while ($ret == FTP_MOREDATA) {
 				$asyncFn();
 
 				// continue downloading
-				$ret = ftp_nb_continue($this->handle);
+				$ret = ftp_nb_continue($this->_handle);
 			}
 			if ($ret !== FTP_FINISHED) {
 				throw new FtpException(
-					Yii::t('gftp', 'Could not asynchronously get file "{remote_file}" from server "{host}"', [
-						'host' => $this->host, 'remote_file' => $remote_file
-					])
+						Yii::t('gftp',
+								'Could not asynchronously get file "{remote_file}" from server "{host}"',
+								[
+										'host' => $this->_host,
+										'remote_file' => $remote_file
+								])
 				);
 			}
 			$asyncFn();
 		}
-		
-		return realpath($local_file);
 	}
 
 	/**
-	 * @see RemoteDriver::put($mode, $local_file, $remote_file, $asynchronous, $asyncFn)
+	 * @inheritDoc
 	 */
-	public function put($local_file, $remote_file = null, $mode = FTP_ASCII, $asynchronous = false, callable $asyncFn = null) {
+	public function put(
+			$local_file,
+			?string $remote_file = null,
+			int $mode = FTP_ASCII,
+			bool $asynchronous = false,
+			callable $asyncFn = null): void {
 		$this->connectIfNeeded();
 		$resourceMode = is_resource($local_file);
-		$hasRemoteFile = isset($remote_file) && $remote_file !== null && is_string($remote_file) && trim($remote_file) !== "";
+		$hasRemoteFile = isset($remote_file) && $remote_file !== null && is_string($remote_file)
+				&& trim($remote_file) !== "";
 
 		if ($resourceMode && !$hasRemoteFile) {
 			throw new FtpException(Yii::t('gftp', 'You must specify remote filename if source is resource'));
-		} else if (!$hasRemoteFile) {
-			$remote_file = basename($local_file);
+		} else {
+			if (!$hasRemoteFile) {
+				$remote_file = basename($local_file);
+			}
 		}
-		$this->param = array('remote_file' => $remote_file, 'local_file' => $local_file, 'asynchronous' => $asynchronous);
+		$this->_param = [
+				'remote_file' => $remote_file,
+				'local_file' => $local_file,
+				'asynchronous' => $asynchronous];
 
 		if ($asynchronous !== true) {
 			$sent = $resourceMode
-				? ftp_fput($this->handle, $remote_file, $local_file, $mode)
-				: ftp_put($this->handle, $remote_file, $local_file, $mode);
+					? ftp_fput($this->_handle, $remote_file, $local_file, $mode)
+					: ftp_put($this->_handle, $remote_file, $local_file, $mode);
 			if (!$sent) {
 				throw new FtpException(
-					Yii::t('gftp', 'Could not put file "{local_file}" on "{remote_file}" on server "{host}"', [
-						'host' => $this->host, 'remote_file' => $remote_file, 'local_file' => $local_file
-					])
+						Yii::t('gftp',
+								'Could not put file "{local_file}" on "{remote_file}" on server "{host}"',
+								[
+										'host' => $this->_host,
+										'remote_file' => $remote_file,
+										'local_file' => $local_file
+								])
 				);
 			}
 		} else {
 			$ret = $resourceMode
-				? ftp_nb_fput($this->handle, $remote_file, $local_file, $mode)
-				: ftp_nb_put($this->handle, $remote_file, $local_file, $mode);
-			$asyncFn = $asyncFn ? $asyncFn : function(){};
+					? ftp_nb_fput($this->_handle, $remote_file, $local_file, $mode)
+					: ftp_nb_put($this->_handle, $remote_file, $local_file, $mode);
+			$asyncFn = $asyncFn
+					? $asyncFn
+					: function () {
+					};
 
 			while ($ret == FTP_MOREDATA) {
 				$asyncFn();
-				$ret = ftp_nb_continue($this->handle);
+				$ret = ftp_nb_continue($this->_handle);
 			}
-				
+
 			if ($ret !== FTP_FINISHED) {
 				throw new FtpException(
-					Yii::t('gftp', 'Could not put file "{local_file}" on "{remote_file}" on server "{host}"', [
-						'host' => $this->host, 'remote_file' => $remote_file, 'local_file' => $local_file
-					])
+						Yii::t('gftp',
+								'Could not put file "{local_file}" on "{remote_file}" on server "{host}"',
+								[
+										'host' => $this->_host,
+										'remote_file' => $remote_file,
+										'local_file' => $local_file
+								])
 				);
 			}
 			$asyncFn();
 		}
-
-		return $remote_file;
 	}
 
 	/**
-	 * @see RemoteDriver::rename($oldname, $newname)
+	 * @inheritDoc
 	 */
-	public function rename($oldname, $newname) {
+	public function rename(string $oldName, string $newName): void {
 		$this->connectIfNeeded();
-		$this->param = array('oldname' => $oldname, 'newname' => $newname);
+		$this->_param = ['oldname' => $oldName, 'newname' => $newName];
 
-		if (!ftp_rename($this->handle, $oldname, $newname)) {
+		if (!ftp_rename($this->_handle, $oldName, $newName)) {
 			throw new FtpException(
-				Yii::t('gftp', 'Could not rename file "{oldname}" to "{newname}" on server "{host}"',[
-					'host' => $this->host, 'oldname' => $oldname, 'newname' => $newname
-				])
+					Yii::t('gftp',
+							'Could not rename file "{oldname}" to "{newname}" on server "{host}"',
+							[
+									'host' => $this->_host,
+									'oldname' => $oldName,
+									'newname' => $newName
+							])
 			);
 		}
 	}
 
 	/**
-	 * @see RemoteDriver::mdtm($path)
+	 * @inheritDoc
 	 */
-	public function mdtm($path) {
+	public function mdtm(string $path): int {
 		$this->connectIfNeeded();
-		$this->param = $path;
+		$this->_param = $path;
 
-		$res = ftp_mdtm($this->handle, $path);
+		$res = ftp_mdtm($this->_handle, $path);
 		if ($res < 0) {
 			throw new FtpException(
-				Yii::t('gftp', 'Could not get modification time of file "{file}" on server "{host}"', [
-					'host' => $this->host, 'file' => $path
-				])
+					Yii::t('gftp',
+							'Could not get modification time of file "{file}" on server "{host}"',
+							[
+									'host' => $this->_host,
+									'file' => $path
+							])
 			);
 		}
 
@@ -569,52 +641,63 @@ class FtpDriver extends \yii\base\BaseObject implements RemoteDriver {
 	}
 
 	/**
-	 * @see RemoteDriver::size($path)
+	 * @inheritDoc
 	 */
-	public function size($path) {
+	public function size(string $path): int {
 		$this->connectIfNeeded();
-		$this->param = $path;
+		$this->_param = $path;
 
-		$res = ftp_size($this->handle, $path);
+		$res = ftp_size($this->_handle, $path);
 		if ($res < 0) {
 			throw new FtpException(
-				Yii::t('gftp', 'Could not get size of file "{file}" on server "{host}"', [
-					'host' => $this->host, 'file' => $path
-				])
+					Yii::t('gftp',
+							'Could not get size of file "{file}" on server "{host}"',
+							[
+									'host' => $this->_host,
+									'file' => $path
+							])
 			);
 		}
-		
+
 		return $res;
 	}
 
-	// *************************************************************************
-	// SPECIFIC FTP METHODS
-	// *************************************************************************
 	/**
 	 * Returns the remote system type.
-	 * 
+	 *
 	 * @return string The remote system type
+	 *
+	 * @throws FtpException If remote connection failed
 	 */
-	public function systype() {
+	public function systype(): string {
 		$this->connectIfNeeded();
-		$res = @ftp_systype($this->handle);
-		return $res == null || $res == false ? 'UNIX' : $res;
+		$res = @ftp_systype($this->_handle);
+		return $res == null || $res == false
+				? 'UNIX'
+				: $res;
 	}
 
 	/**
 	 * Turns on or off passive mode.
 	 *
-	 * @param bool      $pasv          If <strong>TRUE</strong>, the passive mode is turned on, else it's turned off.
+	 * @param bool $passive If <strong>TRUE</strong>, the passive mode is turned on, else it's turned off.
+	 *
+	 * @throws FtpException If remote connection failed
 	 */
-	public function pasv($pasv) {
+	public function pasv(bool $passive): void {
 		$this->connectIfNeeded();
-		$this->param = $pasv;
+		$this->_param = $passive;
 
-		if (!ftp_pasv($this->handle, $pasv === true)) {
+		if (!ftp_pasv($this->_handle, $passive === true)) {
 			throw new FtpException(
-					Yii::t('gftp', 'Could not {set} passive mode on server "{host}": {message}', [
-						'host' => $this->host, 'set' => $pasv ? "set" : "unset"
-					])
+					Yii::t('gftp',
+							'Could not {set} passive mode on server "{host}": {message}',
+							[
+									'host' => $this->_host,
+									'set' => $passive
+											? "set"
+											: "unset"
+							])
 			);
 		}
 	}
@@ -622,49 +705,56 @@ class FtpDriver extends \yii\base\BaseObject implements RemoteDriver {
 	/**
 	 * Execute any command on FTP server.
 	 *
-	 * @param string    $command       FTP command.
-	 * @param bool      $raw           Do not parse command to determine if it is a <i>SITE</i> or <i>SITE EXEC</i> command.
+	 * @param string $command FTP command.
+	 * @param bool $raw Do not parse command to determine if it is a <i>SITE</i> or <i>SITE EXEC</i> command.
 	 *
-	 * @returns bool|string[] Depending on command : SITE and SITE EXEC command will returns <strong>TRUE</strong>; other command will returns an array. If <strong>$raw</strong> is set to <strong>TRUE</strong>, it always return an array.
+	 * @returns bool|string[] Depending on command : SITE and SITE EXEC command will returns <strong>TRUE</strong>;
+	 *         other command will returns an array. If <strong>$raw</strong> is set to <strong>TRUE</strong>, it always
+	 *         return an array.
 	 *
+	 * @return bool|string[]
 	 * @throws FtpException If command execution fails.
 	 *
 	 * @see Ftp::exec Used to execute a <i>SITE EXEC</i> command
 	 * @see Ftp::site Used to execute a <i>SITE</i> command
 	 * @see Ftp::raw  Used to execute any other command (or if $raw is set to <strong>TRUE</strong>)
 	 */
-	public function execute($command, $raw = false) {
+	public function execute(string $command, bool $raw = false) {
 		$this->connectIfNeeded();
-		$this->param = $command;
+		$this->_param = $command;
 
-		if (!$raw && $this->stringStarts($command, "SITE EXEC")) {
-			$this->exec(substr($command, strlen("SITE EXEC")));
-			return true;
-		} else if (!$raw && $this->stringStarts($command, "SITE")) {
-			$this->site(substr($command, strlen("SITE")));
+		if (!$raw && substr($command, 0, 10) == 'SITE EXEC ') {
+			$this->exec(substr($command, 10));
 			return true;
 		} else {
-			return $this->raw($command);
+			if (!$raw && substr($command, 0, 5) == 'SITE ') {
+				$this->site(substr($command, 5));
+				return true;
+			} else {
+				return $this->raw($command);
+			}
 		}
 	}
 
 	/**
 	 * Sends a SITE EXEC command request to the FTP server.
 	 *
-	 * @param string    $command       FTP command (does not include <i>SITE EXEC</i> words).
+	 * @param string $command FTP command (does not include <i>SITE EXEC</i> words).
 	 *
 	 * @throws FtpException If command execution fails.
 	 */
-	public function exec($command) {
+	public function exec(string $command): void {
 		$this->connectIfNeeded();
-		$this->param = "SITE EXEC " . $command;
-		$exec = true;
+		$this->_param = 'SITE EXEC ' . $command;
 
-		if (!ftp_exec($this->handle, substr($command, strlen("SITE EXEC")))) {
+		if (!ftp_exec($this->_handle, $command)) {
 			throw new FtpException(
-				Yii::t('gftp', 'Could not execute command "{command}" on "{host}"', [
-					'host' => $this->host, '{command}' => $this->param
-				])
+					Yii::t('gftp',
+							'Could not execute command "{command}" on "{host}"',
+							[
+									'host' => $this->_host,
+									'{command}' => $this->_param
+							])
 			);
 		}
 	}
@@ -672,19 +762,22 @@ class FtpDriver extends \yii\base\BaseObject implements RemoteDriver {
 	/**
 	 * Sends a SITE command request to the FTP server.
 	 *
-	 * @param string    $command       FTP command (does not include <strong>SITE</strong> word).
+	 * @param string $command FTP command (does not include <strong>SITE</strong> word).
 	 *
 	 * @throws FtpException If command execution fails.
 	 */
-	public function site($command) {
+	public function site(string $command): void {
 		$this->connectIfNeeded();
-		$this->param = "SITE " . $command;
+		$this->_param = 'SITE ' . $command;
 
-		if (!ftp_site($this->handle, $command)) {
+		if (!ftp_site($this->_handle, $command)) {
 			throw new FtpException(
-				Yii::t('gftp', 'Could not execute command "{command}" on "{host}"', [
-					'host' => $this->host, '{command}' => $this->param
-				])
+					Yii::t('gftp',
+							'Could not execute command "{command}" on "{host}"',
+							[
+									'host' => $this->_host,
+									'{command}' => $this->_param
+							])
 			);
 		}
 	}
@@ -692,171 +785,237 @@ class FtpDriver extends \yii\base\BaseObject implements RemoteDriver {
 	/**
 	 * Sends an arbitrary command to the FTP server.
 	 *
-	 * @param string    $command       FTP command to execute.
+	 * @param string $command FTP command to execute.
 	 *
-	 * @return string[] The server's response as an array of strings. No parsing is performed on the response string and not determine if the command succeeded.
+	 * @return string[] The server's response as an array of strings. No parsing is performed on the response string
+	 *         and not determine if the command succeeded.
 	 *
 	 * @throws FtpException If command execution fails.
 	 */
-	public function raw($command) {
+	public function raw(string $command): array {
 		$this->connectIfNeeded();
-		$this->param = $command;
+		$this->_param = $command;
 
-		$res = ftp_raw($this->handle, $command);
-		return $res;
+		return ftp_raw($this->_handle, $command);
 	}
-	
-	// *************************************************************************
-	// UTILITY METHODS
-	// *************************************************************************
+
 	/**
 	 * Connects and log in to FTP server if not already login.
 	 * Call to {link GFTp::connect} and {@link GTP::login} is not mandatory.
 	 * Must be called in each method, before executing FTP command.
 	 *
-	 * @param bool      $login         Flag indicating if login will be done.
-	 *
-	 * @see GFTp::connect
-	 * @see GFTp::login
+	 * @param bool $login Flag indicating if login will be done.
 	 *
 	 * @throws FtpException if connection of login onto FTP server failed.
+	 * @see GFTp::login
+	 *
+	 * @see GFTp::connect
 	 */
-	protected function connectIfNeeded($login = true) {
-		if (!isset($this->handle) || $this->handle == null) {
+	protected function connectIfNeeded(bool $login = true): void {
+		if (!isset($this->_handle) || $this->_handle == null) {
 			$this->connect();
-				
-			if ($login && $this->user != null && $this->user != "") {
-				$this->login($this->user, $this->pass);
+
+			if ($login && $this->_user != null && $this->_user != "") {
+				$this->login();
 			}
 		}
 	}
 
-	// *************************************************************************
-	// ERROR HANDLING
-	// *************************************************************************
 	/**
 	 * Handles FTP error (ftp_** functions sometimes use PHP error instead of methofr return).
 	 * It throws FtpException when ftp_** error is found.
 	 *
-	 * @param string    $function         FTP function name
-	 * @param string    $message          Error message
+	 * @param string $function FTP function name
+	 * @param string $message Error message
 	 *
 	 * @return FtpException if PHP error on ftp_*** method is found, null otherwise.
 	 */
-	private function createException($function, $message) {
+	private function createException(string $function, string $message): FtpException {
 		if ($function == 'ftp_connect()' || $function == 'ftp_ssl_connect()') {
-			$this->handle = false;
+			$this->_handle = false;
 			return new FtpException(
-				Yii::t('gftp', 'Could not connect to FTP server "{host}" on port "{port}": {message}', [
-					'host' => $this->host, 'port' => $this->port, 'message' => $message
-				])
+					Yii::t('gftp',
+							'Could not connect to FTP server "{host}" on port "{port}": {message}',
+							[
+									'host' => $this->_host,
+									'port' => $this->_port,
+									'message' => $message
+							])
 			);
 		} else if ($function == 'ftp_close()') {
 			return new FtpException(
-				Yii::t('gftp', 'Could not close connection to FTP server "{host}" on port "{port}": {message}', [
-					'host' => $this->host, 'port' => $this->port, 'message' => $message
-				])
+					Yii::t('gftp',
+							'Could not close connection to FTP server "{host}" on port "{port}": {message}',
+							[
+									'host' => $this->_host,
+									'port' => $this->_port,
+									'message' => $message
+							])
 			);
 		} else if ($function == 'ftp_nlist()' || $function == 'ftp_rawlist()') {
 			return new FtpException(
-				Yii::t('gftp', 'Could not read folder "{folder}" on server "{host}": {message}', [
-					'host' => $this->host, 'message' => $message, 'folder' => $this->param
-				])
+					Yii::t('gftp',
+							'Could not read folder "{folder}" on server "{host}": {message}',
+							[
+									'host' => $this->_host,
+									'message' => $message,
+									'folder' => $this->_param
+							])
 			);
 		} else if ($function == 'ftp_mkdir()') {
 			return new FtpException(
-				Yii::t('gftp', 'Could not create folder "{folder}" on "{host}": {message}', [
-					'host' => $this->host, 'message' => $message, 'folder' => $this->param
-				])
+					Yii::t('gftp',
+							'Could not create folder "{folder}" on "{host}": {message}',
+							[
+									'host' => $this->_host,
+									'message' => $message,
+									'folder' => $this->_param
+							])
 			);
 		} else if ($function == 'ftp_rmdir()') {
 			return new FtpException(
-				Yii::t('gftp', 'Could not remove folder "{folder}" on "{host}": {message}', [
-					'host' => $this->host, 'message' => $message, 'folder' => $this->param
-				])
+					Yii::t('gftp',
+							'Could not remove folder "{folder}" on "{host}": {message}',
+							[
+									'host' => $this->_host,
+									'message' => $message,
+									'folder' => $this->_param
+							])
 			);
 		} else if ($function == 'ftp_cdup()') {
 			return new FtpException(
-				Yii::t('gftp', 'Could not move to parent directory on "{host}": {message}', [
-					'host' => $this->host, 'message' => $message, 'folder' => $this->param
-				])
+					Yii::t('gftp',
+							'Could not move to parent directory on "{host}": {message}',
+							[
+									'host' => $this->_host,
+									'message' => $message,
+									'folder' => $this->_param
+							])
 			);
 		} else if ($function == 'ftp_chdir()') {
 			return new FtpException(
-				Yii::t('gftp', 'Could not move to folder "{folder}" on "{host}": {message}', [
-					'host' => $this->host, 'message' => $message, 'folder' => $this->param
-				])
+					Yii::t('gftp',
+							'Could not move to folder "{folder}" on "{host}": {message}',
+							[
+									'host' => $this->_host,
+									'message' => $message,
+									'folder' => $this->_param
+							])
 			);
 		} else if ($function == 'ftp_pwd()') {
 			return new FtpException(
-				Yii::t('gftp', 'Could not get current folder on server "{host}": {message}', [
-					'host' => $this->host, 'message' => $message
-				])
+					Yii::t('gftp',
+							'Could not get current folder on server "{host}": {message}',
+							[
+									'host' => $this->_host,
+									'message' => $message
+							])
 			);
 		} else if ($function == 'ftp_chmod()') {
 			return new FtpException(
-				Yii::t('gftp', 'Could change mode (to "{mode}") of file "{file}" on server "{host}": {message}', [
-					'host' => $this->host, 'message' => $message, 
-					'file' => $this->param['file'], 'mode' => $this->param['mode']
-				])
+					Yii::t('gftp',
+							'Could change mode (to "{mode}") of file "{file}" on server "{host}": {message}',
+							[
+									'host' => $this->_host,
+									'message' => $message,
+									'file' => $this->_param['file'],
+									'mode' => $this->_param['mode']
+							])
 			);
 		} else if ($function == 'ftp_put()') {
 			return new FtpException(
-				Yii::t('gftp', 'Could not put file "{local_file}" on "{remote_file}" on server "{host}": {message}', [
-					'host' => $this->host, 'message' => $message, 
-					'remote_file' => $this->param['remote_file'], 'local_file' => $this->param['local_file']
-				])
+					Yii::t('gftp',
+							'Could not put file "{local_file}" on "{remote_file}" on server "{host}": {message}',
+							[
+									'host' => $this->_host,
+									'message' => $message,
+									'remote_file' => $this->_param['remote_file'],
+									'local_file' => $this->_param['local_file']
+							])
 			);
 		} else if ($function == 'ftp_get()') {
 			return new FtpException(
-				Yii::t('gftp', 'Could not synchronously get file "{remote_file}" from server "{host}": {message}', [
-					'host' => $this->host, 'message' => $message, 
-					'remote_file' => $this->param['remote_file']
-				])
+					Yii::t('gftp',
+							'Could not synchronously get file "{remote_file}" from server "{host}": {message}',
+							[
+									'host' => $this->_host,
+									'message' => $message,
+									'remote_file' => $this->_param['remote_file']
+							])
 			);
 		} else if ($function == 'ftp_size()') {
 			return new FtpException(
-				Yii::t('gftp', 'Could not get size of file "{file}" on server "{host}": {message}', [
-					'host' => $this->host, 'message' => $message, 'file' => $this->param
-				])
+					Yii::t('gftp',
+							'Could not get size of file "{file}" on server "{host}": {message}',
+							[
+									'host' => $this->_host,
+									'message' => $message,
+									'file' => $this->_param
+							])
 			);
-		} else if ($function == 'ftp_nb_get()' || $function == 'ftp_nb_continue()') {
+		} else if ($function == 'ftp_nb_get()'
+				|| $function == 'ftp_nb_continue()') {
 			return new FtpException(
-				Yii::t('gftp', 'Could not asynchronously get file "{remote_file}" from server "{host}": {message}', [
-					'host' => $this->host, 'message' => $message, 
-					'remote_file' => $this->param['remote_file']
-				])
+					Yii::t('gftp',
+							'Could not asynchronously get file "{remote_file}" from server "{host}": {message}',
+							[
+									'host' => $this->_host,
+									'message' => $message,
+									'remote_file' => $this->_param['remote_file']
+							])
 			);
 		} else if ($function == 'ftp_rename()') {
 			return new FtpException(
-				Yii::t('gftp', 'Could not rename file "{oldname}" to "{newname}" on server "{host}": {message}', [
-					'host' => $this->host, 'message' => $message, 
-					'oldname' => $this->param['oldname'], 'newname' => $this->param['newname']
-				])
+					Yii::t('gftp',
+							'Could not rename file "{oldname}" to "{newname}" on server "{host}": {message}',
+							[
+									'host' => $this->_host,
+									'message' => $message,
+									'oldname' => $this->_param['oldname'],
+									'newname' => $this->_param['newname']
+							])
 			);
 		} else if ($function == 'ftp_delete()') {
 			return new FtpException(
-				Yii::t('gftp', 'Could not delete file "{file}" on server "{host}" : {message}', [
-					'host' => $this->host, 'message' => $message, 'file' => $this->param
-				])
+					Yii::t('gftp',
+							'Could not delete file "{file}" on server "{host}" : {message}',
+							[
+									'host' => $this->_host,
+									'message' => $message,
+									'file' => $this->_param
+							])
 			);
 		} else if ($function == 'ftp_pasv()') {
 			return new FtpException(
-				Yii::t('gftp', 'Could not {set} passive mode on server "{host}": {message}', [
-					'host' => $this->host, 'message' => $message, 'set' => $this->param ? "set" : "unset"
-				])
+					Yii::t('gftp',
+							'Could not {set} passive mode on server "{host}": {message}',
+							[
+									'host' => $this->_host,
+									'message' => $message,
+									'set' => $this->_param
+											? "set"
+											: "unset"
+							])
 			);
 		} else if ($function == 'ftp_mdtm()') {
 			return new FtpException(
-				Yii::t('gftp', 'Could not get modification time of file "{file}" on server "{host}"', [
-					'host' => $this->host, 'message' => $message, 'file' => $this->param
-				])
+					Yii::t('gftp',
+							'Could not get modification time of file "{file}" on server "{host}"',
+							[
+									'host' => $this->_host,
+									'message' => $message,
+									'file' => $this->_param
+							])
 			);
 		} else if ($function == 'ftp_exec()' || $function == 'ftp_raw()' || $function == 'ftp_site()') {
 			return new FtpException(
-				Yii::t('gftp', 'Could not execute command "{command}" on "{host}": {message}', [
-					'host' => $this->host, 'message' => $message, 'command' => $this->param
-				])
+					Yii::t('gftp',
+							'Could not execute command "{command}" on "{host}": {message}',
+							[
+									'host' => $this->_host,
+									'message' => $message,
+									'command' => $this->_param
+							])
 			);
 		}
 
@@ -864,28 +1023,33 @@ class FtpDriver extends \yii\base\BaseObject implements RemoteDriver {
 	}
 
 	private static $errorHandlerRegistered = false;
-	
+
 	private static function registerErrorHandler() {
 		if (!self::$errorHandlerRegistered && YII_ENABLE_ERROR_HANDLER) {
-			\set_error_handler(function ($code,$message,$file,$line,$context) {
-				if (isset($context['this']) && $context['this'] instanceof FtpDriver) {
-					// disable error capturing to avoid recursive errors
-					restore_error_handler();
-					restore_exception_handler();
-					if (isset($message)) {
-						// FTP error message are formed : ftp_***(): <message>
-						$messages = explode(':', $message, 2);
-						$func = explode(' ', $messages[0], 2);
-						$ex = $context['this']->createException($func[0], $messages[1]);
-						if ($ex != null) {
-							throw $ex;
+			set_error_handler(
+					function ($code, $message, $file, $line, $context) {
+						if (isset($context['this']) && $context['this'] instanceof FtpDriver) {
+							/** @var FtpDriver $driver */
+							$driver = $context['this'];
+							// disable error capturing to avoid recursive errors
+							restore_error_handler();
+							restore_exception_handler();
+							if (isset($message)) {
+								// FTP error message are formed : ftp_***(): <message>
+								$messages = explode(':', $message, 2);
+								$func = explode(' ', $messages[0], 2);
+								$ex = $driver->createException($func[0], $messages[1]);
+								if ($ex != null) {
+									throw $ex;
+								}
+							}
 						}
-					}
-				}
 
-				if (isset (\Yii::$app) && isset(\Yii::$app->errorHandler))
-				\Yii::$app->errorHandler->handleError($code,$message,$file,$line);
-			}, error_reporting());
+						if (isset (Yii::$app) && isset(Yii::$app->errorHandler)) {
+							Yii::$app->errorHandler->handleError($code, $message, $file, $line);
+						}
+					},
+					error_reporting());
 			self::$errorHandlerRegistered = true;
 		}
 	}

@@ -2,17 +2,23 @@
 
 namespace gftp\converter;
 
+use gftp\FtpFile;
+use yii\base\Component;
+
 /**
  * Description of SftpFileListConverter
  */
-class SimpleFileListConverter extends \yii\base\Component implements FtpFileListConverter {
-	
-	public function parse($files) {
+class SimpleFileListConverter extends Component implements FtpFileListConverter {
+
+	/**
+	 * @inheritDoc
+	 */
+	public function parse(array $files): array {
 		
 		$ftpFiles = [];
 		
 		foreach ($files as $file) {
-			$ftpFiles[] = new \gftp\FtpFile([
+			$ftpFiles[] = new FtpFile([
 				'filename' => $file
 			]);
 		}

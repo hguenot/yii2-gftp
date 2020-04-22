@@ -2,17 +2,18 @@
 
 namespace gftp;
 
-/** 
- * FTP file description.
- * 
+use yii\base\BaseObject;
+
+/**
+ * FTP file descriptor.
+ *
  * @author Herve Guenot
  * @link http://www.guenot.info
  * @copyright Copyright &copy; 2012 Herve Guenot
  * @license GNU LESSER GPL 3
  * @version 1.0
  */
-class FtpFile extends \yii\base\BaseObject {
-	
+class FtpFile extends BaseObject {
 	public $isDir;
 	public $rights;
 	public $user;
@@ -20,5 +21,4 @@ class FtpFile extends \yii\base\BaseObject {
 	public $size;
 	public $mdTime;
 	public $filename;
-	
 }

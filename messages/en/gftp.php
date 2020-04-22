@@ -17,8 +17,8 @@
  * NOTE: this file must be saved in UTF-8 encoding.
  */
 return [
-    'An error occured while creating folder "{folder}" on server "{host}"' => '',
-    'An error occured while removing folder "{folder}" on server "{host}"' => '',
+    'An error occurred while creating folder "{folder}" on server "{host}"' => '',
+    'An error occurred while removing folder "{folder}" on server "{host}"' => '',
     'Could change mode (to "{mode}") of file "{file}" on server "{host}"' => '',
     'Could change mode (to "{mode}") of file "{file}" on server "{host}": {message}' => '',
     'Could not asynchronously get file "{remote_file}" from server "{host}"' => '',

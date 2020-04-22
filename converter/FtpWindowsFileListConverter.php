@@ -2,43 +2,47 @@
 
 namespace gftp\converter;
 
+use gftp\FtpFile;
+use yii\base\Component;
+
 /**
  * Converts FTP file list results to FtpFile.
- * 
+ *
  * @author Herve Guenot
  * @link http://www.guenot.info
  * @copyright Copyright &copy; 2015 Herve Guenot
  * @license GNU LESSER GPL 3
  * @version 1.0
  */
-class FtpWindowsFileListConverter extends \yii\base\Component implements FtpFileListConverter {
-	
-	public function parse($fullList) {
-		
+class FtpWindowsFileListConverter extends Component implements FtpFileListConverter {
+	/**
+	 * @inheritDoc
+	 */
+	public function parse(array $fullList): array {
 		$ftpFiles = [];
-		
+
 		foreach ($fullList as $line) {
 			if (($split = $this->parse_ftp_rawlist($line)) !== false) {
-				$ftpFiles[] = new \gftp\FtpFile([
-					'isDir' => $split['isdir'],
-					'rights' => '',
-					'user' => '',
-					'group' => '',
-					'size' => $split['size'],
-					'mdTime' => $split['day'] . ' ' . $split['month'] . ' ' . $split['time/year'],
-					'filename' => $split['name']
+				$ftpFiles[] = new FtpFile([
+						'isDir' => $split['isdir'],
+						'rights' => '',
+						'user' => '',
+						'group' => '',
+						'size' => $split['size'],
+						'mdTime' => $split['day'] . ' ' . $split['month'] . ' ' . $split['time/year'],
+						'filename' => $split['name']
 				]);
 			}
 		}
-		
+
 		return $ftpFiles;
 	}
-	
+
 	// function inspired by http://andreas.glaser.me/2009/03/12/php-ftp_rawlist-parser-windows-unixlinux/
 	private function parse_ftp_rawlist($line) {
-		$output = array();
+		$output = array ();
 
-		ereg('([0-9]{2})-([0-9]{2})-([0-9]{2}) +([0-9]{2}):([0-9]{2})(AM|PM) +([0-9]+|) +(.+)', $Current, $split);
+		ereg('([0-9]{2})-([0-9]{2})-([0-9]{2}) +([0-9]{2}):([0-9]{2})(AM|PM) +([0-9]+|) +(.+)', $line, $split);
 		if (is_array($split)) {
 			if ($split[3] < 70) {
 				$split[3] += 2000;
@@ -52,7 +56,8 @@ class FtpWindowsFileListConverter extends \yii\base\Component implements FtpFile
 			$output['time/year'] = $split[3];
 			$output['name'] = $split[8];
 		}
-		return !empty($output) ? $output : false;
+		return !empty($output)
+				? $output
+				: false;
 	}
-
 }
