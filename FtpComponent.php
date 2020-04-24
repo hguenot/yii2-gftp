@@ -278,8 +278,6 @@ class FtpComponent extends Component {
 	 * @param bool $asynchronous Flag indicating if file transfer should block php application or not.
 	 * @param callable $asyncFn Async callback function called during download process
 	 *
-	 * @return string The full local path (absolute).
-	 *
 	 * @throws FtpException If an FTP error occurred.
 	 * @throws InvalidConfigException If configuration is not valid.
 	 */
@@ -288,11 +286,10 @@ class FtpComponent extends Component {
 			$local_file = null,
 			int $mode = FTP_ASCII,
 			bool $asynchronous = false,
-			callable $asyncFn = null): string {
+			callable $asyncFn = null): void {
 		$this->connectIfNeeded();
-		$local_file = $this->handle->get($remote_file, $local_file, $mode, $asynchronous, $asyncFn);
+		$this->handle->get($remote_file, $local_file, $mode, $asynchronous, $asyncFn);
 		$this->onFileDownloaded(new Event(['sender' => $this, 'data' => $local_file]));
-		return $local_file;
 	}
 
 	/**
@@ -304,8 +301,6 @@ class FtpComponent extends Component {
 	 * @param bool $asynchronous Flag indicating if file transfer should block php application or not.
 	 * @param callable $asyncFn Async callback function called during download process
 	 *
-	 * @return string The full local path (absolute).
-	 *
 	 * @throws FtpException If an error occurred during file transfer.
 	 * @throws InvalidConfigException If configuration is not valid.
 	 */
@@ -314,11 +309,10 @@ class FtpComponent extends Component {
 			?string $remote_file = null,
 			int $mode = FTP_ASCII,
 			bool $asynchronous = false,
-			callable $asyncFn = null): string {
+			callable $asyncFn = null): void {
 		$this->connectIfNeeded();
-		$full_remote_file = $this->handle->put($local_file, $remote_file, $mode, $asynchronous, $asyncFn);
+		$this->handle->put($local_file, $remote_file, $mode, $asynchronous, $asyncFn);
 		$this->onFileUploaded(new Event(['sender' => $this, 'data' => $remote_file]));
-		return $full_remote_file;
 	}
 
 	/**
