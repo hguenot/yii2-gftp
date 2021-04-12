@@ -430,6 +430,19 @@ class FtpComponent extends Component {
 		$this->connectIfNeeded();
 		return $this->handle->mdtm($path);
 	}
+	
+		/**
+	 * Execute raw command on the FTP server.
+	 *
+	 * @param string $command, example: @OPTS UTF8 ON".
+	 *
+	 * @throws FtpException If an error occurred while renaming file or folder.
+	 * @throws InvalidConfigException If configuration is not valid.
+	 */
+	public function raw($command){
+		$this->connectIfNeeded();
+		return $this->handle->raw($command);
+	}
 
 	/* *********************************
 	 * EVENTS SECTION
