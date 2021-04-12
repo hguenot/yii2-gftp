@@ -434,7 +434,7 @@ class FtpComponent extends Component {
 		/**
 	 * Execute raw command on the FTP server.
 	 *
-	 * @param string $command, example: @OPTS UTF8 ON".
+	 * @param string $command, example: "OPTS UTF8 ON".
 	 *
 	 * @throws FtpException If an error occurred while renaming file or folder.
 	 * @throws InvalidConfigException If configuration is not valid.
