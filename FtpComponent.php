@@ -431,7 +431,7 @@ class FtpComponent extends Component {
 		return $this->handle->mdtm($path);
 	}
 	
-		/**
+	/**
 	 * Execute raw command on the FTP server.
 	 *
 	 * @param string $command, example: "OPTS UTF8 ON".
