@@ -45,7 +45,7 @@ class FtpUnixFileListConverter extends Component implements FtpFileListConverter
 
 		$split = preg_split('[ ]', $line, 9, PREG_SPLIT_NO_EMPTY);
 		if ($split[0] != 'total') {
-			$output['isdir'] = ($split[0]{0} === 'd');
+			$output['isdir'] = ($split[0][0] === 'd');
 			$output['perms'] = $split[0];
 			$output['number'] = $split[1];
 			$output['owner'] = $split[2];
